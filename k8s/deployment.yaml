@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-gateway
+  template:
+    metadata:
+      labels:
+        app: webhook-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: webhook-gateway:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: webhook-gateway-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
