@@ -32,6 +32,8 @@ class WebhookRoute(Base):
     destination_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     signing_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    auth_header_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    auth_header_value: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

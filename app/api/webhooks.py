@@ -18,6 +18,7 @@ def _to_response(route: WebhookRoute) -> RouteResponse:
         destination_url=route.destination_url,
         enabled=route.enabled,
         signing_secret_set=route.signing_secret is not None,
+        auth_header_set=route.auth_header_name is not None and route.auth_header_value is not None,
         description=route.description,
         webhook_url=f"{settings.public_base_url}/{route.slug}/webhook",
         created_at=route.created_at,
@@ -37,6 +38,8 @@ async def create_route(
         slug=body.slug,
         destination_url=body.destination_url,
         signing_secret=body.signing_secret,
+        auth_header_name=body.auth_header_name,
+        auth_header_value=body.auth_header_value,
         description=body.description,
         created_by=user.id,
     )
@@ -76,6 +79,10 @@ async def update_route(
         route.enabled = body.enabled
     if body.signing_secret is not None:
         route.signing_secret = body.signing_secret
+    if body.auth_header_name is not None:
+        route.auth_header_name = body.auth_header_name
+    if body.auth_header_value is not None:
+        route.auth_header_value = body.auth_header_value
     if body.description is not None:
         route.description = body.description
     await session.commit()

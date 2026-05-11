@@ -52,6 +52,8 @@ async def inbound_webhook(
         query_string=query_string,
         slug=route.slug,
         signing_secret=route.signing_secret,
+        auth_header_name=route.auth_header_name,
+        auth_header_value=route.auth_header_value,
     )
 
     delivery = DeliveryAttempt(

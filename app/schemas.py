@@ -20,6 +20,8 @@ class RouteCreate(BaseModel):
     slug: str
     destination_url: str
     signing_secret: str | None = None
+    auth_header_name: str | None = None
+    auth_header_value: str | None = None
     description: str | None = None
 
     @field_validator("slug")
@@ -43,6 +45,8 @@ class RouteUpdate(BaseModel):
     destination_url: str | None = None
     enabled: bool | None = None
     signing_secret: str | None = None
+    auth_header_name: str | None = None
+    auth_header_value: str | None = None
     description: str | None = None
 
     @field_validator("destination_url")
@@ -59,6 +63,7 @@ class RouteResponse(BaseModel):
     destination_url: str
     enabled: bool
     signing_secret_set: bool
+    auth_header_set: bool
     description: str | None
     webhook_url: str
     created_at: datetime

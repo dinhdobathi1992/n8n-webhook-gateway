@@ -52,6 +52,8 @@ async def forward_request(
     query_string: str,
     slug: str,
     signing_secret: str | None = None,
+    auth_header_name: str | None = None,
+    auth_header_value: str | None = None,
 ) -> ForwardResult:
     delivery_id = str(uuid.uuid4())
     timestamp = str(int(time.time()))
@@ -65,6 +67,9 @@ async def forward_request(
 
     if signing_secret:
         forward_headers["X-Gateway-Signature"] = sign_gateway_payload(signing_secret, timestamp, body)
+
+    if auth_header_name and auth_header_value:
+        forward_headers[auth_header_name] = auth_header_value
 
     url = destination_url
     if query_string:

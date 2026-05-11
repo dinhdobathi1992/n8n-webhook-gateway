@@ -12,6 +12,9 @@ export default function RouteForm() {
   const [description, setDescription] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [signingSecret, setSigningSecret] = useState("");
+  const [showAuth, setShowAuth] = useState(false);
+  const [authHeaderName, setAuthHeaderName] = useState("");
+  const [authHeaderValue, setAuthHeaderValue] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +42,8 @@ export default function RouteForm() {
         const data: Record<string, string> = { destination_url: destinationUrl };
         if (description) data.description = description;
         if (signingSecret) data.signing_secret = signingSecret;
+        if (authHeaderName) data.auth_header_name = authHeaderName;
+        if (authHeaderValue) data.auth_header_value = authHeaderValue;
         await api.updateRoute(Number(id), data);
       } else {
         await api.createRoute({
@@ -46,6 +51,8 @@ export default function RouteForm() {
           destination_url: destinationUrl,
           description: description || undefined,
           signing_secret: signingSecret || undefined,
+          auth_header_name: authHeaderName || undefined,
+          auth_header_value: authHeaderValue || undefined,
         });
       }
       navigate("/");
@@ -126,6 +133,42 @@ export default function RouteForm() {
               placeholder="HMAC signing secret"
             />
           </label>
+        )}
+
+        <div style={styles.toggleRow}>
+          <label style={styles.toggleLabel}>
+            <input
+              type="checkbox"
+              checked={showAuth}
+              onChange={(e) => setShowAuth(e.target.checked)}
+            />
+            {isEdit ? "Update destination auth header" : "Set destination auth header"}
+          </label>
+        </div>
+
+        {showAuth && (
+          <>
+            <label style={styles.label}>
+              Header Name
+              <input
+                style={styles.input}
+                type="text"
+                value={authHeaderName}
+                onChange={(e) => setAuthHeaderName(e.target.value)}
+                placeholder="e.g. api_key"
+              />
+            </label>
+            <label style={styles.label}>
+              Header Value
+              <input
+                style={styles.input}
+                type="password"
+                value={authHeaderValue}
+                onChange={(e) => setAuthHeaderValue(e.target.value)}
+                placeholder="secret value"
+              />
+            </label>
+          </>
         )}
 
         <div style={styles.buttonRow}>
