@@ -1,11 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: webhook-gateway
+  name: n8n-webhook-gateway
+  namespace: platformbot
+  labels:
+    app: n8n-webhook-gateway
 spec:
+  type: ClusterIP
   selector:
-    app: webhook-gateway
+    app: n8n-webhook-gateway
   ports:
     - port: 80
       targetPort: 3000
-  type: ClusterIP
+      protocol: TCP

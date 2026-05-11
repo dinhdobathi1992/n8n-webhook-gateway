@@ -1,35 +1,49 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webhook-gateway
+  name: n8n-webhook-gateway
+  namespace: platformbot
+  labels:
+    app: n8n-webhook-gateway
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: webhook-gateway
+      app: n8n-webhook-gateway
   template:
     metadata:
       labels:
-        app: webhook-gateway
+        app: n8n-webhook-gateway
     spec:
+      imagePullSecrets:
+        - name: awsecr-cred
       containers:
-        - name: gateway
-          image: webhook-gateway:latest
+        - name: n8n-webhook-gateway
+          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway:latest
           ports:
             - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
           envFrom:
             - secretRef:
-                name: webhook-gateway-secret
-          readinessProbe:
+                name: n8n-webhook-gateway-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
             httpGet:
               path: /health
               port: 3000
             initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 3
             periodSeconds: 10
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi

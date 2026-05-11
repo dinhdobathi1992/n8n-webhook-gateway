@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-webhook-gateway
+  namespace: platformbot
+  labels:
+    app: n8n-webhook-gateway
+  annotations:
+    kubernetes.io/tls-acme: "true"
+spec:
+  ingressClassName: external-ingress-nginx
+  rules:
+    - host: n8n-webhook-gateway.platformbot.snag.eks.aws.theiconic.com.au
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n-webhook-gateway
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - n8n-webhook-gateway.platformbot.snag.eks.aws.theiconic.com.au
+      secretName: n8n-webhook-gateway-certificate
