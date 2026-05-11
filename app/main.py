@@ -32,6 +32,10 @@ from app.api.router import api_router  # noqa: E402
 
 app.include_router(api_router)
 
+from app.inbound.http import router as inbound_router  # noqa: E402
+
+app.include_router(inbound_router)
+
 
 @app.get("/health")
 async def health(session: AsyncSession = Depends(get_session)):
