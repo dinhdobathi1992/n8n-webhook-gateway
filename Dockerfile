@@ -1,9 +1,9 @@
 FROM node:20-slim AS ui-builder
 WORKDIR /ui
-COPY ui/package.json ui/pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+COPY ui/package.json ./
+RUN npm install
 COPY ui/ .
-RUN pnpm build
+RUN npm run build
 
 FROM python:3.12-slim
 WORKDIR /app

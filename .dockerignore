@@ -1,0 +1,13 @@
+.venv/
+.env
+*.db
+__pycache__/
+ui/node_modules/
+ui/dist/
+n8n-webhook-gateway/
+n8n-webhook-gateway.zip
+k8s/secret.yaml
+.git/
+.claude/
+docs/
+tests/

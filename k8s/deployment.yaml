@@ -15,11 +15,9 @@ spec:
       labels:
         app: n8n-webhook-gateway
     spec:
-      imagePullSecrets:
-        - name: awsecr-cred
       containers:
         - name: n8n-webhook-gateway
-          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway:latest
+          image: dinhdobathi/n8n-webhook-gateway:latest
           ports:
             - containerPort: 3000
           env:
