@@ -26,6 +26,8 @@ export default function RouteForm() {
           setSlug(r.slug);
           setDestinationUrl(r.destination_url);
           setDescription(r.description || "");
+          if (r.signing_secret_set) setShowSecret(true);
+          if (r.auth_header_set) setShowAuth(true);
         })
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to load route")
@@ -148,6 +150,9 @@ export default function RouteForm() {
 
         {showAuth && (
           <>
+            {isEdit && (
+              <span style={styles.hint}>Auth header is set. Enter new values to update.</span>
+            )}
             <label style={styles.label}>
               Header Name
               <input
