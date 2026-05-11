@@ -19,6 +19,7 @@ def _to_response(route: WebhookRoute) -> RouteResponse:
         enabled=route.enabled,
         signing_secret_set=route.signing_secret is not None,
         auth_header_set=route.auth_header_name is not None and route.auth_header_value is not None,
+        auth_header_name=route.auth_header_name,
         description=route.description,
         webhook_url=f"{settings.public_base_url}/{route.slug}/webhook",
         created_at=route.created_at,

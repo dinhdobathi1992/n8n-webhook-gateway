@@ -27,7 +27,10 @@ export default function RouteForm() {
           setDestinationUrl(r.destination_url);
           setDescription(r.description || "");
           if (r.signing_secret_set) setShowSecret(true);
-          if (r.auth_header_set) setShowAuth(true);
+          if (r.auth_header_set) {
+            setShowAuth(true);
+            if (r.auth_header_name) setAuthHeaderName(r.auth_header_name);
+          }
         })
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to load route")
@@ -170,7 +173,7 @@ export default function RouteForm() {
                 type="password"
                 value={authHeaderValue}
                 onChange={(e) => setAuthHeaderValue(e.target.value)}
-                placeholder="secret value"
+                placeholder={isEdit && !authHeaderValue ? "••••••••  (enter to change)" : "secret value"}
               />
             </label>
           </>

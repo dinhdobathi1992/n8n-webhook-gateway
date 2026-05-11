@@ -64,6 +64,7 @@ class RouteResponse(BaseModel):
     enabled: bool
     signing_secret_set: bool
     auth_header_set: bool
+    auth_header_name: str | None
     description: str | None
     webhook_url: str
     created_at: datetime
