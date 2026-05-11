@@ -28,9 +28,9 @@ async def lifespan(application: FastAPI):
 
 app = FastAPI(title="n8n Webhook Gateway", lifespan=lifespan)
 
-from app.api.auth import router as auth_router  # noqa: E402
+from app.api.router import api_router  # noqa: E402
 
-app.include_router(auth_router)
+app.include_router(api_router)
 
 
 @app.get("/health")
