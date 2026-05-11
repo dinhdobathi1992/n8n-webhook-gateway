@@ -31,6 +31,16 @@ async def inbound_webhook(
         if not verify_slack_signature(route.signing_secret, timestamp, body, signature):
             return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
 
+    # Slack URL verification challenge — after signature check
+    if request.method == "POST" and body:
+        try:
+            import json
+            payload = json.loads(body)
+            if isinstance(payload, dict) and payload.get("type") == "url_verification":
+                return JSONResponse(content={"challenge": payload.get("challenge", "")})
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+
     headers = dict(request.headers)
     query_string = str(request.url.query) if request.url.query else ""
 
