@@ -25,10 +25,12 @@ async def inbound_webhook(
 
     body = await request.body()
 
-    if route.signing_secret and request.headers.get("x-slack-signature"):
+    if route.signing_secret:
+        slack_sig = request.headers.get("x-slack-signature")
         timestamp = request.headers.get("x-slack-request-timestamp", "")
-        signature = request.headers.get("x-slack-signature", "")
-        if not verify_slack_signature(route.signing_secret, timestamp, body, signature):
+        if not slack_sig:
+            return JSONResponse(status_code=401, content={"detail": "Missing Slack signature"})
+        if not verify_slack_signature(route.signing_secret, timestamp, body, slack_sig):
             return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
 
     # Slack URL verification challenge — after signature check
