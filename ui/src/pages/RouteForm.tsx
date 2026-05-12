@@ -55,7 +55,7 @@ export default function RouteForm() {
           slug,
           destination_url: destinationUrl,
           description: description || undefined,
-          signing_secret: signingSecret || undefined,
+          signing_secret: signingSecret,
           auth_header_name: authHeaderName || undefined,
           auth_header_value: authHeaderValue || undefined,
         });
@@ -116,33 +116,46 @@ export default function RouteForm() {
           />
         </label>
 
-        <div style={styles.toggleRow}>
-          <label style={styles.toggleLabel}>
-            <input
-              type="checkbox"
-              checked={showSecret}
-              onChange={(e) => setShowSecret(e.target.checked)}
-            />
-            {isEdit ? "Update signing secret" : "Set signing secret"}
-          </label>
-        </div>
-
-        {showSecret && (
+        {isEdit ? (
           <>
-            {isEdit && (
-              <span style={styles.hint}>Signing secret is set. Enter new value to update.</span>
+            <div style={styles.toggleRow}>
+              <label style={styles.toggleLabel}>
+                <input
+                  type="checkbox"
+                  checked={showSecret}
+                  onChange={(e) => setShowSecret(e.target.checked)}
+                />
+                Update signing secret
+              </label>
+            </div>
+            {showSecret && (
+              <>
+                <span style={styles.hint}>Signing secret is set. Enter new value to update.</span>
+                <label style={styles.label}>
+                  Signing Secret
+                  <input
+                    style={styles.input}
+                    type="password"
+                    value={signingSecret}
+                    onChange={(e) => setSigningSecret(e.target.value)}
+                    placeholder="••••••••  (enter to change)"
+                  />
+                </label>
+              </>
             )}
+          </>
+        ) : (
           <label style={styles.label}>
-            Signing Secret
+            Slack Signing Secret (required)
             <input
               style={styles.input}
               type="password"
               value={signingSecret}
               onChange={(e) => setSigningSecret(e.target.value)}
-              placeholder={isEdit && !signingSecret ? "••••••••  (enter to change)" : "Slack Signing Secret"}
+              placeholder="From Slack App → Basic Information → Signing Secret"
+              required
             />
           </label>
-          </>
         )}
 
         <div style={styles.toggleRow}>

@@ -19,7 +19,7 @@ class LoginResponse(BaseModel):
 class RouteCreate(BaseModel):
     slug: str
     destination_url: str
-    signing_secret: str | None = None
+    signing_secret: str
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None

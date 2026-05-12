@@ -56,7 +56,7 @@ export interface Route {
 export interface RouteCreate {
   slug: string;
   destination_url: string;
-  signing_secret?: string;
+  signing_secret: string;
   auth_header_name?: string;
   auth_header_value?: string;
   description?: string;

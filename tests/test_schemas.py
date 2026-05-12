@@ -5,7 +5,7 @@ from app.schemas import RouteCreate
 
 
 def test_valid_slug():
-    r = RouteCreate(slug="my-route_1", destination_url="https://example.com/hook")
+    r = RouteCreate(slug="my-route_1", destination_url="https://example.com/hook", signing_secret="test-secret")
     assert r.slug == "my-route_1"
 
 
@@ -30,5 +30,10 @@ def test_destination_url_must_be_http():
 
 
 def test_destination_url_https():
-    r = RouteCreate(slug="ok", destination_url="https://good.com/webhook")
+    r = RouteCreate(slug="ok", destination_url="https://good.com/webhook", signing_secret="test")
     assert r.destination_url == "https://good.com/webhook"
+
+
+def test_signing_secret_required():
+    with pytest.raises(ValidationError, match="Field required"):
+        RouteCreate(slug="ok", destination_url="https://example.com/hook")
