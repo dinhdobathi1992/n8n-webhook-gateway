@@ -8,7 +8,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!resp.ok) {
     const body = await resp.json().catch(() => ({}));
-    throw new Error(body.detail || `HTTP ${resp.status}`);
+    let msg = `HTTP ${resp.status}`;
+    if (typeof body.detail === "string") {
+      msg = body.detail;
+    } else if (Array.isArray(body.detail)) {
+      msg = body.detail.map((e: { loc?: string[]; msg?: string }) =>
+        `${(e.loc || []).slice(-1).join(".")}: ${e.msg || "invalid"}`
+      ).join(", ");
+    }
+    throw new Error(msg);
   }
   return resp.json();
 }
