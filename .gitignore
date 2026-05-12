@@ -21,7 +21,10 @@ k8s/secret.yaml
 n8n-webhook-gateway/
 n8n-webhook-gateway.zip
 
-# Claude Code local backend config (contains credentials)
-.claude/settings.local.json
+# Claude Code
+.claude/
 
 *.db.DS_Store
+
+docs/superpowers/*
+CLAUDE.md
