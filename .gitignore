@@ -23,3 +23,5 @@ n8n-webhook-gateway.zip
 
 # Claude Code local backend config (contains credentials)
 .claude/settings.local.json
+
+*.db.DS_Store
