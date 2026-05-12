@@ -128,6 +128,10 @@ export default function RouteForm() {
         </div>
 
         {showSecret && (
+          <>
+            {isEdit && (
+              <span style={styles.hint}>Signing secret is set. Enter new value to update.</span>
+            )}
           <label style={styles.label}>
             Signing Secret
             <input
@@ -135,9 +139,10 @@ export default function RouteForm() {
               type="password"
               value={signingSecret}
               onChange={(e) => setSigningSecret(e.target.value)}
-              placeholder="HMAC signing secret"
+              placeholder={isEdit && !signingSecret ? "••••••••  (enter to change)" : "Slack Signing Secret"}
             />
           </label>
+          </>
         )}
 
         <div style={styles.toggleRow}>
