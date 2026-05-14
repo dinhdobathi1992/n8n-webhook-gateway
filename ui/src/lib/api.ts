@@ -48,12 +48,16 @@ export const api = {
     ),
 };
 
+export type SourceType = "slack" | "gchat" | "generic";
+
 export interface Route {
   id: number;
   slug: string;
+  source_type: SourceType;
   destination_url: string;
   enabled: boolean;
   signing_secret_set: boolean;
+  secret_header_name: string | null;
   auth_header_set: boolean;
   auth_header_name: string | null;
   description: string | null;
@@ -63,8 +67,10 @@ export interface Route {
 
 export interface RouteCreate {
   slug: string;
+  source_type: SourceType;
   destination_url: string;
-  signing_secret: string;
+  signing_secret?: string;
+  secret_header_name?: string;
   auth_header_name?: string;
   auth_header_value?: string;
   description?: string;

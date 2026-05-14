@@ -1,10 +1,17 @@
 import re
 from datetime import datetime
+from enum import Enum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 SLUG_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 RESERVED_SLUGS = {"api", "health", "docs", "openapi.json", "redoc", "ui"}
+
+
+class SourceType(str, Enum):
+    slack = "slack"
+    gchat = "gchat"
+    generic = "generic"
 
 
 class LoginRequest(BaseModel):
@@ -18,8 +25,10 @@ class LoginResponse(BaseModel):
 
 class RouteCreate(BaseModel):
     slug: str
+    source_type: SourceType = SourceType.slack
     destination_url: str
-    signing_secret: str
+    signing_secret: str | None = None
+    secret_header_name: str | None = None
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None
@@ -40,11 +49,21 @@ class RouteCreate(BaseModel):
             raise ValueError("destination_url must start with http:// or https://")
         return v
 
+    @model_validator(mode="after")
+    def validate_source_requirements(self) -> "RouteCreate":
+        if self.source_type == SourceType.slack and not self.signing_secret:
+            raise ValueError("signing_secret is required for source_type=slack")
+        if self.source_type == SourceType.gchat and not self.signing_secret:
+            raise ValueError("signing_secret (JWT audience URL) is required for source_type=gchat")
+        return self
+
 
 class RouteUpdate(BaseModel):
+    source_type: SourceType | None = None
     destination_url: str | None = None
     enabled: bool | None = None
     signing_secret: str | None = None
+    secret_header_name: str | None = None
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None
@@ -60,9 +79,11 @@ class RouteUpdate(BaseModel):
 class RouteResponse(BaseModel):
     id: int
     slug: str
+    source_type: str
     destination_url: str
     enabled: bool
     signing_secret_set: bool
+    secret_header_name: str | None
     auth_header_set: bool
     auth_header_name: str | None
     description: str | None

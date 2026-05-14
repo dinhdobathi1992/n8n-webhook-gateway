@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.encrypted_string_type import EncryptedString
+
 
 class Base(DeclarativeBase):
     pass
@@ -31,9 +33,11 @@ class WebhookRoute(Base):
     slug: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     destination_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    signing_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False, default="slack")
+    signing_secret: Mapped[str | None] = mapped_column(EncryptedString(2048), nullable=True)
+    secret_header_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     auth_header_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    auth_header_value: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    auth_header_value: Mapped[str | None] = mapped_column(EncryptedString(2048), nullable=True)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

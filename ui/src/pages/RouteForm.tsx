@@ -1,6 +1,19 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import type { SourceType } from "../lib/api";
+
+const SOURCE_LABELS: Record<SourceType, string> = {
+  slack: "Slack",
+  gchat: "Google Chat",
+  generic: "Generic",
+};
+
+const SECRET_HINTS: Record<SourceType, string> = {
+  slack: "From Slack App → Basic Information → Signing Secret",
+  gchat: "The public URL of this webhook endpoint (JWT audience)",
+  generic: "The expected secret value callers must send",
+};
 
 export default function RouteForm() {
   const { id } = useParams<{ id: string }>();
@@ -8,10 +21,12 @@ export default function RouteForm() {
   const isEdit = Boolean(id);
 
   const [slug, setSlug] = useState("");
+  const [sourceType, setSourceType] = useState<SourceType>("slack");
   const [destinationUrl, setDestinationUrl] = useState("");
   const [description, setDescription] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [signingSecret, setSigningSecret] = useState("");
+  const [secretHeaderName, setSecretHeaderName] = useState("");
   const [showAuth, setShowAuth] = useState(false);
   const [authHeaderName, setAuthHeaderName] = useState("");
   const [authHeaderValue, setAuthHeaderValue] = useState("");
@@ -24,9 +39,11 @@ export default function RouteForm() {
         .getRoute(Number(id))
         .then((r) => {
           setSlug(r.slug);
+          setSourceType(r.source_type || "slack");
           setDestinationUrl(r.destination_url);
           setDescription(r.description || "");
           if (r.signing_secret_set) setShowSecret(true);
+          if (r.secret_header_name) setSecretHeaderName(r.secret_header_name);
           if (r.auth_header_set) {
             setShowAuth(true);
             if (r.auth_header_name) setAuthHeaderName(r.auth_header_name);
@@ -37,6 +54,14 @@ export default function RouteForm() {
         );
     }
   }, [id]);
+
+  const secretRequired = !isEdit && (sourceType === "slack" || sourceType === "gchat");
+
+  function secretLabel(): string {
+    if (sourceType === "slack") return "Slack Signing Secret";
+    if (sourceType === "gchat") return "JWT Audience URL";
+    return "Secret Value";
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -49,13 +74,19 @@ export default function RouteForm() {
         if (signingSecret) data.signing_secret = signingSecret;
         if (authHeaderName) data.auth_header_name = authHeaderName;
         if (authHeaderValue) data.auth_header_value = authHeaderValue;
+        data.source_type = sourceType;
+        if (sourceType === "generic" && secretHeaderName) {
+          data.secret_header_name = secretHeaderName;
+        }
         await api.updateRoute(Number(id), data);
       } else {
         await api.createRoute({
           slug,
+          source_type: sourceType,
           destination_url: destinationUrl,
           description: description || undefined,
-          signing_secret: signingSecret,
+          signing_secret: signingSecret || undefined,
+          secret_header_name: sourceType === "generic" ? secretHeaderName || undefined : undefined,
           auth_header_name: authHeaderName || undefined,
           auth_header_value: authHeaderValue || undefined,
         });
@@ -94,6 +125,21 @@ export default function RouteForm() {
         </label>
 
         <label style={styles.label}>
+          Source Type
+          <select
+            style={styles.input}
+            value={sourceType}
+            onChange={(e) => setSourceType(e.target.value as SourceType)}
+          >
+            {(Object.keys(SOURCE_LABELS) as SourceType[]).map((t) => (
+              <option key={t} value={t}>
+                {SOURCE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={styles.label}>
           Destination URL
           <input
             style={styles.input}
@@ -125,14 +171,14 @@ export default function RouteForm() {
                   checked={showSecret}
                   onChange={(e) => setShowSecret(e.target.checked)}
                 />
-                Update signing secret
+                Update {secretLabel().toLowerCase()}
               </label>
             </div>
             {showSecret && (
               <>
-                <span style={styles.hint}>Signing secret is set. Enter new value to update.</span>
+                <span style={styles.hint}>{SECRET_HINTS[sourceType]}</span>
                 <label style={styles.label}>
-                  Signing Secret
+                  {secretLabel()}
                   <input
                     style={styles.input}
                     type="password"
@@ -146,15 +192,31 @@ export default function RouteForm() {
           </>
         ) : (
           <label style={styles.label}>
-            Slack Signing Secret (required)
+            {secretLabel()} {secretRequired ? "(required)" : "(optional)"}
             <input
               style={styles.input}
               type="password"
               value={signingSecret}
               onChange={(e) => setSigningSecret(e.target.value)}
-              placeholder="From Slack App → Basic Information → Signing Secret"
-              required
+              placeholder={SECRET_HINTS[sourceType]}
+              required={secretRequired}
             />
+          </label>
+        )}
+
+        {sourceType === "generic" && (
+          <label style={styles.label}>
+            Secret Header Name
+            <input
+              style={styles.input}
+              type="text"
+              value={secretHeaderName}
+              onChange={(e) => setSecretHeaderName(e.target.value)}
+              placeholder="Authorization (default if empty)"
+            />
+            <span style={styles.hint}>
+              Which header to check for the secret value
+            </span>
           </label>
         )}
 

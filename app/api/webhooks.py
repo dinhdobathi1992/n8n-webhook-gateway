@@ -15,9 +15,11 @@ def _to_response(route: WebhookRoute) -> RouteResponse:
     return RouteResponse(
         id=route.id,
         slug=route.slug,
+        source_type=route.source_type or "slack",
         destination_url=route.destination_url,
         enabled=route.enabled,
         signing_secret_set=route.signing_secret is not None,
+        secret_header_name=route.secret_header_name,
         auth_header_set=route.auth_header_name is not None and route.auth_header_value is not None,
         auth_header_name=route.auth_header_name,
         description=route.description,
@@ -37,8 +39,10 @@ async def create_route(
         raise HTTPException(status_code=409, detail=f"slug '{body.slug}' already exists")
     route = WebhookRoute(
         slug=body.slug,
+        source_type=body.source_type.value,
         destination_url=body.destination_url,
         signing_secret=body.signing_secret,
+        secret_header_name=body.secret_header_name,
         auth_header_name=body.auth_header_name,
         auth_header_value=body.auth_header_value,
         description=body.description,
@@ -74,12 +78,16 @@ async def update_route(
     route = result.scalar_one_or_none()
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found")
+    if body.source_type is not None:
+        route.source_type = body.source_type.value
     if body.destination_url is not None:
         route.destination_url = body.destination_url
     if body.enabled is not None:
         route.enabled = body.enabled
     if body.signing_secret is not None:
         route.signing_secret = body.signing_secret
+    if body.secret_header_name is not None:
+        route.secret_header_name = body.secret_header_name
     if body.auth_header_name is not None:
         route.auth_header_name = body.auth_header_name
     if body.auth_header_value is not None:

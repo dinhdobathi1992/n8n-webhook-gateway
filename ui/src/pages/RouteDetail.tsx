@@ -81,6 +81,12 @@ export default function RouteDetail() {
             </span>
           </div>
           <div style={styles.field}>
+            <span style={styles.fieldLabel}>Source Type</span>
+            <span style={styles.fieldValue}>
+              {route.source_type === "gchat" ? "Google Chat" : route.source_type === "generic" ? "Generic" : "Slack"}
+            </span>
+          </div>
+          <div style={styles.field}>
             <span style={styles.fieldLabel}>Signing Secret</span>
             <span style={styles.fieldValue}>
               {route.signing_secret_set ? "Configured" : "Not set"}
