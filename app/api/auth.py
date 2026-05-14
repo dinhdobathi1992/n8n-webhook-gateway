@@ -54,7 +54,7 @@ async def login(body: LoginRequest, request: Request, response: Response, sessio
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     attempts.clear()
-    is_https = settings.public_base_url.startswith("https://")
+    is_https = str(request.url.scheme) == "https"
     token = create_access_token(user.id)
     response.set_cookie(
         key=COOKIE_NAME,

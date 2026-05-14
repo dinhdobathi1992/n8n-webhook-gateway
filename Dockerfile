@@ -1,4 +1,4 @@
-FROM node:20-slim AS ui-builder
+FROM node:22-slim AS ui-builder
 WORKDIR /ui
 COPY ui/package.json ./
 RUN npm install

@@ -81,6 +81,18 @@ export default function RouteDetail() {
             </span>
           </div>
           <div style={styles.field}>
+            <span style={styles.fieldLabel}>Source</span>
+            <span
+              style={{
+                ...styles.badge,
+                background: "#e8f4fd",
+                color: "#0071e3",
+              }}
+            >
+              {route.source_type.toUpperCase()}
+            </span>
+          </div>
+          <div style={styles.field}>
             <span style={styles.fieldLabel}>Signing Secret</span>
             <span style={styles.fieldValue}>
               {route.signing_secret_set ? "Configured" : "Not set"}

@@ -1,10 +1,13 @@
 import re
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 SLUG_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 RESERVED_SLUGS = {"api", "health", "docs", "openapi.json", "redoc", "ui"}
+
+SourceType = Literal["slack", "gchat", "generic"]
 
 
 class LoginRequest(BaseModel):
@@ -19,7 +22,9 @@ class LoginResponse(BaseModel):
 class RouteCreate(BaseModel):
     slug: str
     destination_url: str
-    signing_secret: str
+    source_type: SourceType = "slack"
+    signing_secret: str | None = None
+    secret_header_name: str | None = None
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None
@@ -40,11 +45,26 @@ class RouteCreate(BaseModel):
             raise ValueError("destination_url must start with http:// or https://")
         return v
 
+    @model_validator(mode="after")
+    def validate_source_fields(self):
+        if self.source_type == "slack":
+            if not self.signing_secret:
+                raise ValueError("signing_secret is required for slack source")
+        elif self.source_type == "generic":
+            if not self.signing_secret:
+                raise ValueError("signing_secret is required for generic source")
+            if not self.secret_header_name:
+                raise ValueError("secret_header_name is required for generic source")
+        elif self.source_type == "gchat":
+            self.signing_secret = None
+        return self
+
 
 class RouteUpdate(BaseModel):
     destination_url: str | None = None
     enabled: bool | None = None
     signing_secret: str | None = None
+    secret_header_name: str | None = None
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None
@@ -62,9 +82,11 @@ class RouteResponse(BaseModel):
     slug: str
     destination_url: str
     enabled: bool
+    source_type: str
     signing_secret_set: bool
     auth_header_set: bool
     auth_header_name: str | None
+    secret_header_name: str | None
     description: str | None
     webhook_url: str
     created_at: datetime

@@ -10,8 +10,10 @@ export default function RouteForm() {
   const [slug, setSlug] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [sourceType, setSourceType] = useState("slack");
   const [showSecret, setShowSecret] = useState(false);
   const [signingSecret, setSigningSecret] = useState("");
+  const [secretHeaderName, setSecretHeaderName] = useState("");
   const [showAuth, setShowAuth] = useState(false);
   const [authHeaderName, setAuthHeaderName] = useState("");
   const [authHeaderValue, setAuthHeaderValue] = useState("");
@@ -26,6 +28,8 @@ export default function RouteForm() {
           setSlug(r.slug);
           setDestinationUrl(r.destination_url);
           setDescription(r.description || "");
+          setSourceType(r.source_type || "slack");
+          if (r.secret_header_name) setSecretHeaderName(r.secret_header_name);
           if (r.signing_secret_set) setShowSecret(true);
           if (r.auth_header_set) {
             setShowAuth(true);
@@ -44,9 +48,10 @@ export default function RouteForm() {
     setLoading(true);
     try {
       if (isEdit) {
-        const data: Record<string, string> = { destination_url: destinationUrl };
+        const data: Record<string, string | undefined> = { destination_url: destinationUrl };
         if (description) data.description = description;
         if (signingSecret) data.signing_secret = signingSecret;
+        if (sourceType === "generic" && secretHeaderName) data.secret_header_name = secretHeaderName;
         if (authHeaderName) data.auth_header_name = authHeaderName;
         if (authHeaderValue) data.auth_header_value = authHeaderValue;
         await api.updateRoute(Number(id), data);
@@ -54,8 +59,10 @@ export default function RouteForm() {
         await api.createRoute({
           slug,
           destination_url: destinationUrl,
+          source_type: sourceType,
           description: description || undefined,
-          signing_secret: signingSecret,
+          signing_secret: sourceType !== "gchat" ? signingSecret : undefined,
+          secret_header_name: sourceType === "generic" ? secretHeaderName : undefined,
           auth_header_name: authHeaderName || undefined,
           auth_header_value: authHeaderValue || undefined,
         });
@@ -116,46 +123,129 @@ export default function RouteForm() {
           />
         </label>
 
-        {isEdit ? (
-          <>
-            <div style={styles.toggleRow}>
-              <label style={styles.toggleLabel}>
-                <input
-                  type="checkbox"
-                  checked={showSecret}
-                  onChange={(e) => setShowSecret(e.target.checked)}
-                />
-                Update signing secret
-              </label>
-            </div>
-            {showSecret && (
-              <>
-                <span style={styles.hint}>Signing secret is set. Enter new value to update.</span>
-                <label style={styles.label}>
-                  Signing Secret
+        <label style={styles.label}>
+          Source Type
+          <select
+            style={styles.input}
+            value={sourceType}
+            onChange={(e) => setSourceType(e.target.value)}
+            disabled={isEdit}
+          >
+            <option value="slack">Slack</option>
+            <option value="gchat">Google Chat</option>
+            <option value="generic">Generic (header-based)</option>
+          </select>
+          {isEdit && (
+            <span style={styles.hint}>Source type cannot be changed after creation</span>
+          )}
+        </label>
+
+        {sourceType === "slack" && (
+          isEdit ? (
+            <>
+              <div style={styles.toggleRow}>
+                <label style={styles.toggleLabel}>
                   <input
-                    style={styles.input}
-                    type="password"
-                    value={signingSecret}
-                    onChange={(e) => setSigningSecret(e.target.value)}
-                    placeholder="••••••••  (enter to change)"
+                    type="checkbox"
+                    checked={showSecret}
+                    onChange={(e) => setShowSecret(e.target.checked)}
                   />
+                  Update signing secret
                 </label>
+              </div>
+              {showSecret && (
+                <>
+                  <span style={styles.hint}>Signing secret is set. Enter new value to update.</span>
+                  <label style={styles.label}>
+                    Signing Secret
+                    <input
+                      style={styles.input}
+                      type="password"
+                      value={signingSecret}
+                      onChange={(e) => setSigningSecret(e.target.value)}
+                      placeholder="••••••••  (enter to change)"
+                    />
+                  </label>
+                </>
+              )}
+            </>
+          ) : (
+            <label style={styles.label}>
+              Slack Signing Secret (required)
+              <input
+                style={styles.input}
+                type="password"
+                value={signingSecret}
+                onChange={(e) => setSigningSecret(e.target.value)}
+                placeholder="From Slack App → Basic Information → Signing Secret"
+                required
+              />
+            </label>
+          )
+        )}
+
+        {sourceType === "gchat" && (
+          <div style={styles.infoBox}>
+            Google Chat webhooks are verified via JWT — no signing secret needed.
+          </div>
+        )}
+
+        {sourceType === "generic" && (
+          <>
+            <label style={styles.label}>
+              Secret Header Name (required)
+              <input
+                style={styles.input}
+                type="text"
+                value={secretHeaderName}
+                onChange={(e) => setSecretHeaderName(e.target.value)}
+                placeholder="e.g. X-Telegram-Bot-Api-Secret-Token"
+                required
+                disabled={isEdit}
+              />
+              <span style={styles.hint}>
+                Header name the source sends with the secret value
+              </span>
+            </label>
+            {isEdit ? (
+              <>
+                <div style={styles.toggleRow}>
+                  <label style={styles.toggleLabel}>
+                    <input
+                      type="checkbox"
+                      checked={showSecret}
+                      onChange={(e) => setShowSecret(e.target.checked)}
+                    />
+                    Update secret value
+                  </label>
+                </div>
+                {showSecret && (
+                  <label style={styles.label}>
+                    Secret Value
+                    <input
+                      style={styles.input}
+                      type="password"
+                      value={signingSecret}
+                      onChange={(e) => setSigningSecret(e.target.value)}
+                      placeholder="••••••••  (enter to change)"
+                    />
+                  </label>
+                )}
               </>
+            ) : (
+              <label style={styles.label}>
+                Secret Value (required)
+                <input
+                  style={styles.input}
+                  type="password"
+                  value={signingSecret}
+                  onChange={(e) => setSigningSecret(e.target.value)}
+                  placeholder="The secret value to match against"
+                  required
+                />
+              </label>
             )}
           </>
-        ) : (
-          <label style={styles.label}>
-            Slack Signing Secret (required)
-            <input
-              style={styles.input}
-              type="password"
-              value={signingSecret}
-              onChange={(e) => setSigningSecret(e.target.value)}
-              placeholder="From Slack App → Basic Information → Signing Secret"
-              required
-            />
-          </label>
         )}
 
         <div style={styles.toggleRow}>
@@ -260,6 +350,13 @@ const styles: Record<string, React.CSSProperties> = {
   hint: {
     fontSize: 13,
     color: "#86868b",
+  },
+  infoBox: {
+    background: "#e8f4fd",
+    color: "#0071e3",
+    padding: "10px 14px",
+    borderRadius: 10,
+    fontSize: 14,
   },
   toggleRow: {
     display: "flex",

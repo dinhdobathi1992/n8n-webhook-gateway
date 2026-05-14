@@ -53,9 +53,11 @@ export interface Route {
   slug: string;
   destination_url: string;
   enabled: boolean;
+  source_type: string;
   signing_secret_set: boolean;
   auth_header_set: boolean;
   auth_header_name: string | null;
+  secret_header_name: string | null;
   description: string | null;
   webhook_url: string;
   created_at: string;
@@ -64,7 +66,9 @@ export interface Route {
 export interface RouteCreate {
   slug: string;
   destination_url: string;
-  signing_secret: string;
+  source_type?: string;
+  signing_secret?: string;
+  secret_header_name?: string;
   auth_header_name?: string;
   auth_header_value?: string;
   description?: string;

@@ -1,13 +1,24 @@
+import json
+
 from fastapi import APIRouter, Request, Response, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.forwarding import forward_request, verify_slack_signature
+from app.forwarding import forward_request
+from app.inbound.verify_gchat import verify_gchat
+from app.inbound.verify_generic import verify_generic
+from app.inbound.verify_slack import verify_slack
 from app.models import DeliveryAttempt, WebhookRoute
 
 router = APIRouter()
+
+VERIFIERS = {
+    "slack": verify_slack,
+    "gchat": verify_gchat,
+    "generic": verify_generic,
+}
 
 
 @router.api_route("/{slug}/webhook", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
@@ -25,18 +36,14 @@ async def inbound_webhook(
 
     body = await request.body()
 
-    if route.signing_secret:
-        slack_sig = request.headers.get("x-slack-signature")
-        timestamp = request.headers.get("x-slack-request-timestamp", "")
-        if not slack_sig:
-            return JSONResponse(status_code=401, content={"detail": "Missing Slack signature"})
-        if not verify_slack_signature(route.signing_secret, timestamp, body, slack_sig):
-            return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
+    verifier = VERIFIERS.get(route.source_type)
+    if verifier:
+        error = await verifier(route, request, body)
+        if error:
+            return JSONResponse(status_code=401, content={"detail": error})
 
-    # Slack URL verification challenge — after signature check
-    if request.method == "POST" and body:
+    if route.source_type == "slack" and request.method == "POST" and body:
         try:
-            import json
             payload = json.loads(body)
             if isinstance(payload, dict) and payload.get("type") == "url_verification":
                 return JSONResponse(content={"challenge": payload.get("challenge", "")})

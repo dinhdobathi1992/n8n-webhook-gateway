@@ -102,3 +102,30 @@ async def test_delete_route_soft_disables(auth_client: AsyncClient):
 async def test_unauthenticated_rejected(client: AsyncClient):
     resp = await client.get("/api/webhooks")
     assert resp.status_code == 401
+
+
+async def test_create_gchat_route(auth_client: AsyncClient):
+    resp = await auth_client.post("/api/webhooks", json={
+        "slug": "gchat-route",
+        "destination_url": "https://example.com/hook",
+        "source_type": "gchat",
+    })
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["source_type"] == "gchat"
+    assert data["signing_secret_set"] is False
+
+
+async def test_create_generic_route(auth_client: AsyncClient):
+    resp = await auth_client.post("/api/webhooks", json={
+        "slug": "generic-route",
+        "destination_url": "https://example.com/hook",
+        "source_type": "generic",
+        "signing_secret": "my-secret",
+        "secret_header_name": "X-Telegram-Bot-Api-Secret-Token",
+    })
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["source_type"] == "generic"
+    assert data["secret_header_name"] == "X-Telegram-Bot-Api-Secret-Token"
+    assert data["signing_secret_set"] is True

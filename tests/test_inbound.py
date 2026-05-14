@@ -27,6 +27,7 @@ async def seed_data(client: AsyncClient):
             slug="test-inbound",
             destination_url="https://n8n.example.com/webhook/abc",
             enabled=True,
+            signing_secret="inbound-secret",
             created_by=user.id,
         )
         session.add(route)
@@ -45,6 +46,16 @@ async def seed_data(client: AsyncClient):
             created_by=user.id,
         )
         session.add(disabled)
+        generic = WebhookRoute(
+            slug="test-generic",
+            destination_url="https://n8n.example.com/webhook/gen",
+            enabled=True,
+            source_type="generic",
+            signing_secret="my-token-123",
+            secret_header_name="X-Webhook-Secret",
+            created_by=user.id,
+        )
+        session.add(generic)
         await session.commit()
 
 
@@ -70,7 +81,19 @@ def _mock_forward_result(**kwargs):
 @patch("app.inbound.http.forward_request")
 async def test_forward_success(mock_fwd: AsyncMock, client: AsyncClient):
     mock_fwd.return_value = _mock_forward_result()
-    resp = await client.post("/test-inbound/webhook", json={"event": "test"})
+    body = b'{"event":"test"}'
+    timestamp = str(int(time.time()))
+    sig_base = f"v0:{timestamp}:{body.decode()}"
+    sig = "v0=" + hmac_mod.new(b"inbound-secret", sig_base.encode(), hashlib.sha256).hexdigest()
+    resp = await client.post(
+        "/test-inbound/webhook",
+        content=body,
+        headers={
+            "content-type": "application/json",
+            "x-slack-request-timestamp": timestamp,
+            "x-slack-signature": sig,
+        },
+    )
     assert resp.status_code == 200
     mock_fwd.assert_called_once()
 
@@ -128,4 +151,34 @@ async def test_signed_route_no_slack_headers_rejects(mock_fwd: AsyncMock, client
     resp = await client.post("/test-signed/webhook", json={"data": "no-slack-headers"})
     assert resp.status_code == 401
     assert "Missing Slack signature" in resp.json()["detail"]
+    mock_fwd.assert_not_called()
+
+
+@patch("app.inbound.http.forward_request")
+async def test_generic_valid_header(mock_fwd: AsyncMock, client: AsyncClient):
+    mock_fwd.return_value = _mock_forward_result()
+    resp = await client.post(
+        "/test-generic/webhook",
+        json={"data": "test"},
+        headers={"X-Webhook-Secret": "my-token-123"},
+    )
+    assert resp.status_code == 200
+    mock_fwd.assert_called_once()
+
+
+@patch("app.inbound.http.forward_request")
+async def test_generic_wrong_header_401(mock_fwd: AsyncMock, client: AsyncClient):
+    resp = await client.post(
+        "/test-generic/webhook",
+        json={"data": "test"},
+        headers={"X-Webhook-Secret": "wrong-token"},
+    )
+    assert resp.status_code == 401
+    mock_fwd.assert_not_called()
+
+
+@patch("app.inbound.http.forward_request")
+async def test_generic_missing_header_401(mock_fwd: AsyncMock, client: AsyncClient):
+    resp = await client.post("/test-generic/webhook", json={"data": "test"})
+    assert resp.status_code == 401
     mock_fwd.assert_not_called()

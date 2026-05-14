@@ -35,5 +35,30 @@ def test_destination_url_https():
 
 
 def test_signing_secret_required():
-    with pytest.raises(ValidationError, match="Field required"):
+    with pytest.raises(ValidationError, match="signing_secret is required"):
         RouteCreate(slug="ok", destination_url="https://example.com/hook")
+
+
+def test_gchat_no_signing_secret_ok():
+    r = RouteCreate(slug="gchat-test", destination_url="https://example.com/hook", source_type="gchat")
+    assert r.signing_secret is None
+
+
+def test_generic_requires_signing_secret():
+    with pytest.raises(ValidationError, match="signing_secret is required for generic"):
+        RouteCreate(slug="gen", destination_url="https://example.com/hook", source_type="generic", secret_header_name="X-Secret")
+
+
+def test_generic_requires_secret_header_name():
+    with pytest.raises(ValidationError, match="secret_header_name is required for generic"):
+        RouteCreate(slug="gen", destination_url="https://example.com/hook", source_type="generic", signing_secret="s3cret")
+
+
+def test_generic_valid():
+    r = RouteCreate(slug="gen", destination_url="https://example.com/hook", source_type="generic", signing_secret="s3cret", secret_header_name="X-Token")
+    assert r.source_type == "generic"
+
+
+def test_invalid_source_type():
+    with pytest.raises(ValidationError):
+        RouteCreate(slug="ok", destination_url="https://example.com/hook", source_type="invalid")
