@@ -1,24 +1,25 @@
 # n8n Webhook Gateway
 
-HTTP proxy that sits between Slack (or any webhook source) and n8n. Register routes, forward requests, log deliveries.
+HTTP proxy between webhook sources (Slack, Google Chat, Telegram, etc.) and n8n. Register routes, verify signatures, forward requests, log deliveries.
 
 ```
-Slack ──HTTP──▶ gateway.example/my-bot/webhook ──▶ n8n.example/webhook/abc
+Slack/GChat/Telegram ──HTTP──▶ gateway.example/my-bot/webhook ──▶ n8n.example/webhook/abc
 ```
 
 ## Why
 
 n8n webhooks are public URLs. This gateway adds:
-- Auth header injection (n8n Header Auth)
-- Slack signature verification
-- Retry on failure (exponential backoff)
-- Delivery logging (status, latency, response)
-- One URL per Slack app, route to multiple n8n workflows
+- **Multi-source verification** — Slack HMAC-SHA256, Google Chat JWT, generic header-based
+- **Field encryption** — signing secrets and auth values encrypted at rest (Fernet/AES)
+- **Auth header injection** — forward requests with n8n Header Auth credentials
+- **Retry on failure** — exponential backoff on 5xx/timeout
+- **Delivery logging** — status, latency, response excerpt per request
+- **Session persistence** — cookie-based auth survives page refresh
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/dinhdobathi/n8n-webhook-gateway
+git clone https://github.com/dinhdobathi1992/n8n-webhook-gateway
 cd n8n-webhook-gateway
 cp .env.example .env    # edit SECRET_KEY and ADMIN_PASSWORD
 docker compose up -d
@@ -27,21 +28,30 @@ docker compose up -d
 
 Login: `admin` / `admin` (change in `.env`)
 
-## How It Works
+## Source Types
 
-1. Create route in UI: slug `my-bot` → destination `https://n8n.example.com/webhook/abc`
-2. Set auth header if n8n webhook uses Header Auth: name `x-api-key`, value `your-secret`
-3. Configure Slack Event Subscriptions URL: `https://gateway.example/my-bot/webhook`
-4. Slack sends events → gateway verifies (optional) → forwards with auth → logs delivery
+| Type | Verification | Required Fields |
+|------|-------------|-----------------|
+| **slack** | HMAC-SHA256 (`v0:timestamp:body`) + url_verification | `signing_secret` |
+| **gchat** | JWT Bearer token via Google public keys | none |
+| **generic** | Header value comparison (timing-safe) | `signing_secret` + `secret_header_name` |
+
+### Examples
+
+**Slack** — paste your Signing Secret from Slack App → Basic Information.
+
+**Telegram** — create a generic route with `secret_header_name: X-Telegram-Bot-Api-Secret-Token` and set `signing_secret` to the `secret_token` you pass to `setWebhook`.
+
+**GitHub** — create a generic route with `secret_header_name: X-Hub-Signature-256` and your webhook secret.
 
 ## Config
 
-| Variable | Default | What |
-|----------|---------|------|
-| `SECRET_KEY` | `change-me` | JWT signing. **Change this.** |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | `change-me` | JWT signing + field encryption key. **Change this.** |
 | `ADMIN_USERNAME` | `admin` | Login username |
 | `ADMIN_PASSWORD` | `admin` | Login password |
-| `PUBLIC_BASE_URL` | `http://localhost:3000` | Shown in webhook URLs |
+| `PUBLIC_BASE_URL` | `http://localhost:3000` | Shown in webhook URLs, used as gchat JWT audience |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./gateway.db` | DB connection |
 | `FORWARD_TIMEOUT_SECONDS` | `30` | Per-attempt timeout |
 | `FORWARD_MAX_RETRIES` | `3` | Retry on 5xx/timeout |
@@ -65,14 +75,28 @@ ANY  /:slug/webhook               → public proxy (no auth)
 
 ### Create Route
 
+**Slack:**
 ```bash
 curl -b cookies -X POST http://localhost:3000/api/webhooks \
   -H "Content-Type: application/json" \
   -d '{
     "slug": "my-bot",
     "destination_url": "https://n8n.example.com/webhook/abc",
-    "auth_header_name": "x-api-key",
-    "auth_header_value": "secret123"
+    "source_type": "slack",
+    "signing_secret": "your-slack-signing-secret"
+  }'
+```
+
+**Generic (Telegram):**
+```bash
+curl -b cookies -X POST http://localhost:3000/api/webhooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "telegram",
+    "destination_url": "https://n8n.example.com/webhook/xyz",
+    "source_type": "generic",
+    "signing_secret": "your-telegram-secret-token",
+    "secret_header_name": "X-Telegram-Bot-Api-Secret-Token"
   }'
 ```
 
@@ -96,11 +120,25 @@ cp k8s/secret.yaml.example k8s/secret.yaml  # fill values
 kubectl apply -f k8s/
 ```
 
-**Docker Hub**: `dinhdobathi/n8n-webhook-gateway:latest`
+**Docker Hub**: `dinhdobathi/n8n-webhook-gateway:latest` (amd64 + arm64)
+
+## Development
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cd ui && pnpm install && pnpm build && cd ..
+uvicorn app.main:app --host 0.0.0.0 --port 3000 --reload
+```
+
+Run tests:
+```bash
+pytest tests/ -q    # 46 tests
+```
 
 ## Stack
 
-Python 3.12 · FastAPI · SQLite · React · Vite · Docker
+Python 3.12 · FastAPI · SQLAlchemy · SQLite · Fernet encryption · React · Vite · Docker
 
 ## Docs
 
