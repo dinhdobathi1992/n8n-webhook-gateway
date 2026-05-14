@@ -6,7 +6,6 @@ import uuid
 from dataclasses import dataclass
 
 import httpx
-import jwt as pyjwt
 
 from app.config import settings
 
@@ -36,34 +35,6 @@ def verify_slack_signature(signing_secret: str, timestamp: str, body: bytes, sig
         signing_secret.encode(), sig_basestring.encode(), hashlib.sha256
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
-
-
-_gchat_jwks_client = pyjwt.PyJWKClient("https://www.googleapis.com/oauth2/v3/certs", cache_keys=True)
-
-
-def verify_gchat_token(audience: str, bearer_token: str) -> bool:
-    try:
-        signing_key = _gchat_jwks_client.get_signing_key_from_jwt(bearer_token)
-        pyjwt.decode(
-            bearer_token,
-            signing_key.key,
-            algorithms=["RS256"],
-            audience=audience,
-        )
-        return True
-    except Exception:
-        return False
-
-
-def verify_generic_secret(
-    expected_secret: str,
-    header_value: str,
-) -> bool:
-    if not expected_secret or not header_value:
-        return False
-    raw_match = hmac.compare_digest(header_value, expected_secret)
-    bearer_match = hmac.compare_digest(header_value, f"Bearer {expected_secret}")
-    return raw_match or bearer_match
 
 
 def sign_gateway_payload(signing_secret: str, timestamp: str, body: bytes) -> str:

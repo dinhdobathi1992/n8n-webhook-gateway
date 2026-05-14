@@ -18,7 +18,6 @@ export default function RouteTable({ routes, onDelete }: Props) {
         <thead>
           <tr>
             <th style={styles.th}>Slug</th>
-            <th style={styles.th}>Source</th>
             <th style={styles.th}>Destination</th>
             <th style={styles.th}>Status</th>
             <th style={styles.th}>Webhook URL</th>
@@ -32,11 +31,6 @@ export default function RouteTable({ routes, onDelete }: Props) {
                 <Link to={`/routes/${r.id}`} style={styles.slugLink}>
                   {r.slug}
                 </Link>
-              </td>
-              <td style={styles.td}>
-                <span style={styles.sourceBadge}>
-                  {r.source_type === "gchat" ? "Google Chat" : r.source_type === "generic" ? "Generic" : "Slack"}
-                </span>
               </td>
               <td style={styles.td}>
                 <span style={styles.dest} title={r.destination_url}>
@@ -120,11 +114,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#0071e3",
     fontWeight: 500,
     textDecoration: "none",
-  },
-  sourceBadge: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#1d1d1f",
   },
   dest: {
     color: "#1d1d1f",

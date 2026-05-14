@@ -1,21 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { api } from "./lib/api";
+import { useState } from "react";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import RouteForm from "./pages/RouteForm";
 import RouteDetail from "./pages/RouteDetail";
 
 export default function App() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    api.listRoutes().then(() => setAuthed(true)).catch(() => setAuthed(false));
-  }, []);
-
-  if (authed === null) {
-    return null;
-  }
+  const [authed, setAuthed] = useState(false);
 
   if (!authed) {
     return <Login onLogin={() => setAuthed(true)} />;

@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.forwarding import forward_request, verify_gchat_token, verify_generic_secret, verify_slack_signature
+from app.forwarding import forward_request, verify_slack_signature
 from app.models import DeliveryAttempt, WebhookRoute
 
 router = APIRouter()
@@ -24,35 +24,17 @@ async def inbound_webhook(
         return JSONResponse(status_code=404, content={"detail": "Route not found"})
 
     body = await request.body()
-    source_type = route.source_type or "slack"
 
-    if source_type == "slack":
+    if route.signing_secret:
         slack_sig = request.headers.get("x-slack-signature")
         timestamp = request.headers.get("x-slack-request-timestamp", "")
         if not slack_sig:
             return JSONResponse(status_code=401, content={"detail": "Missing Slack signature"})
-        if not route.signing_secret:
-            return JSONResponse(status_code=500, content={"detail": "Route misconfigured: no signing_secret"})
         if not verify_slack_signature(route.signing_secret, timestamp, body, slack_sig):
-            return JSONResponse(status_code=401, content={"detail": "Invalid Slack signature"})
+            return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
 
-    elif source_type == "gchat":
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return JSONResponse(status_code=401, content={"detail": "Missing Bearer token"})
-        token = auth_header.removeprefix("Bearer ")
-        audience = route.signing_secret or str(request.url)
-        if not verify_gchat_token(audience, token):
-            return JSONResponse(status_code=401, content={"detail": "Invalid Google Chat token"})
-
-    elif source_type == "generic":
-        if route.signing_secret:
-            header_name = (route.secret_header_name or "Authorization").lower()
-            incoming_value = request.headers.get(header_name, "")
-            if not verify_generic_secret(route.signing_secret, incoming_value):
-                return JSONResponse(status_code=401, content={"detail": "Invalid secret"})
-
-    if source_type == "slack" and request.method == "POST" and body:
+    # Slack URL verification challenge — after signature check
+    if request.method == "POST" and body:
         try:
             import json
             payload = json.loads(body)

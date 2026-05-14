@@ -28,5 +28,3 @@ n8n-webhook-gateway.zip
 
 docs/superpowers/*
 CLAUDE.md
-# Claude Code local backend config (contains credentials)
-.claude/settings.local.json
