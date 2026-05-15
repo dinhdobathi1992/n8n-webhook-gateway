@@ -6,6 +6,12 @@ import CopyButton from "../components/CopyButton";
 import DeliveryLog from "../components/DeliveryLog";
 import TestPanel from "../components/TestPanel";
 
+const sourceBadge: Record<string, string> = {
+  slack: "bg-info-bg text-info border-info/20",
+  gchat: "bg-[#f0b90b]/8 text-[#f0b90b] border-[#f0b90b]/20",
+  generic: "bg-[#8b5cf6]/8 text-[#8b5cf6] border-[#8b5cf6]/20",
+};
+
 export default function RouteDetail() {
   const { id } = useParams<{ id: string }>();
   const [route, setRoute] = useState<Route | null>(null);
@@ -34,103 +40,148 @@ export default function RouteDetail() {
 
   if (error) {
     return (
-      <div style={styles.page}>
-        <p style={styles.error}>{error}</p>
-        <Link to="/">Back to Dashboard</Link>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        <div className="bg-error-bg border border-error/20 text-error px-4 py-3 rounded-lg text-sm text-center">
+          {error}
+        </div>
+        <Link to="/" className="text-accent hover:text-accent-hover text-sm transition-colors mt-4 inline-block">
+          &larr; Back to Dashboard
+        </Link>
       </div>
     );
   }
 
   if (!route) {
     return (
-      <div style={styles.page}>
-        <p style={styles.muted}>Loading...</p>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="w-6 h-6 border-2 border-border border-t-accent rounded-full animate-spin" />
+          <p className="text-text-muted text-sm">Loading route...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.headerRow}>
-        <Link to="/" style={styles.backLink}>
-          &larr; Dashboard
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 animate-fade-in">
+      <div className="flex justify-between items-center mb-6">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-text-secondary hover:text-accent text-sm no-underline transition-colors font-medium">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Dashboard
         </Link>
-        <Link to={`/routes/${route.id}/edit`} style={styles.editLink}>
+        <Link
+          to={`/routes/${route.id}/edit`}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-surface-elevated border border-border-hover hover:bg-surface-hover text-text-primary rounded-md text-sm font-medium no-underline transition-all duration-150"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
           Edit
         </Link>
       </div>
 
-      <div style={styles.infoCard}>
-        <h1 style={styles.title}>{route.slug}</h1>
+      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+        <div className="px-6 sm:px-8 py-6 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <h1 className="text-xl sm:text-2xl font-semibold text-text-primary tracking-tight">
+              {route.slug}
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${
+                route.enabled
+                  ? "bg-success/8 text-success border-success/20"
+                  : "bg-surface-elevated text-text-muted border-border"
+              }`}>
+                {route.enabled && <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />}
+                {route.enabled ? "Active" : "Disabled"}
+              </span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${sourceBadge[route.source_type] || sourceBadge.generic}`}>
+                {route.source_type.toUpperCase()}
+              </span>
+            </div>
+          </div>
+        </div>
 
-        <div style={styles.grid}>
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Destination</span>
-            <span style={styles.fieldValue}>{route.destination_url}</span>
+        <div className="px-6 sm:px-8 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Destination</span>
+            <span className="text-sm text-text-primary break-all leading-relaxed">{route.destination_url}</span>
           </div>
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Status</span>
-            <span
-              style={{
-                ...styles.badge,
-                background: route.enabled ? "#e8f8ed" : "#f2f2f2",
-                color: route.enabled ? "#34c759" : "#86868b",
-              }}
-            >
-              {route.enabled ? "Enabled" : "Disabled"}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Signing Secret</span>
+            <span className="text-sm text-text-secondary">
+              {route.signing_secret_set ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-success">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Configured
+                </span>
+              ) : "Not set"}
             </span>
           </div>
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Source</span>
-            <span
-              style={{
-                ...styles.badge,
-                background: "#e8f4fd",
-                color: "#0071e3",
-              }}
-            >
-              {route.source_type.toUpperCase()}
-            </span>
-          </div>
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Signing Secret</span>
-            <span style={styles.fieldValue}>
-              {route.signing_secret_set ? "Configured" : "Not set"}
-            </span>
-          </div>
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Created</span>
-            <span style={styles.fieldValue}>
-              {new Date(route.created_at).toLocaleDateString()}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Created</span>
+            <span className="text-sm text-text-secondary">
+              {new Date(route.created_at).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
             </span>
           </div>
         </div>
 
-        <div style={styles.webhookRow}>
-          <span style={styles.fieldLabel}>Webhook URL</span>
-          <div style={styles.urlRow}>
-            <code style={styles.codeUrl}>{route.webhook_url}</code>
+        <div className="px-6 sm:px-8 py-5 border-t border-border bg-bg/30">
+          <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest block mb-2">Webhook URL</span>
+          <div className="flex items-center gap-2">
+            <code className="bg-bg/60 border border-border/60 px-4 py-2.5 rounded-lg text-sm font-mono text-text-primary flex-1 break-all">
+              {route.webhook_url}
+            </code>
             <CopyButton text={route.webhook_url} />
           </div>
         </div>
 
         {route.description && (
-          <div style={styles.field}>
-            <span style={styles.fieldLabel}>Description</span>
-            <span style={styles.fieldValue}>{route.description}</span>
+          <div className="px-6 sm:px-8 py-5 border-t border-border">
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest block mb-1.5">Description</span>
+            <span className="text-sm text-text-secondary leading-relaxed">{route.description}</span>
           </div>
         )}
       </div>
 
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Test Webhook</h2>
+      <div className="mt-10">
+        <div className="flex items-center gap-2 mb-4">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+          <h2 className="text-lg font-semibold text-text-primary">Test Webhook</h2>
+        </div>
         <TestPanel webhookUrl={route.webhook_url} onSent={refreshDeliveries} />
       </div>
 
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Delivery Log</h2>
+      <div className="mt-10 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            <h2 className="text-lg font-semibold text-text-primary">Delivery Log</h2>
+          </div>
+          {deliveries.length > 0 && (
+            <span className="text-xs text-text-muted bg-surface px-2.5 py-1 rounded-lg border border-border">
+              {deliveries.length} {deliveries.length === 1 ? "delivery" : "deliveries"}
+            </span>
+          )}
+        </div>
         {deliveries.length === 0 ? (
-          <p style={styles.muted}>No deliveries yet.</p>
+          <div className="bg-surface border border-border rounded-xl py-10 text-center">
+            <p className="text-text-muted text-sm">No deliveries yet. Send a test request above.</p>
+          </div>
         ) : (
           <DeliveryLog deliveries={deliveries} />
         )}
@@ -138,112 +189,3 @@ export default function RouteDetail() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    maxWidth: 1100,
-    margin: "0 auto",
-    padding: "24px",
-  },
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  backLink: {
-    color: "#0071e3",
-    fontSize: 15,
-    textDecoration: "none",
-  },
-  editLink: {
-    color: "#0071e3",
-    fontSize: 15,
-    textDecoration: "none",
-  },
-  infoCard: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: "28px 32px",
-    border: "1px solid #e0e0e0",
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-  },
-  title: {
-    fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif",
-    fontSize: 24,
-    fontWeight: 600,
-    color: "#1d1d1f",
-    margin: 0,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 16,
-  },
-  field: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: "#86868b",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-  },
-  fieldValue: {
-    fontSize: 15,
-    color: "#1d1d1f",
-    wordBreak: "break-all" as const,
-  },
-  badge: {
-    display: "inline-block",
-    padding: "3px 10px",
-    borderRadius: 20,
-    fontSize: 13,
-    fontWeight: 500,
-    width: "fit-content",
-  },
-  webhookRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  urlRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  codeUrl: {
-    background: "#f5f5f7",
-    padding: "8px 12px",
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: "ui-monospace, Consolas, monospace",
-    flex: 1,
-    wordBreak: "break-all" as const,
-  },
-  section: {
-    marginTop: 32,
-  },
-  sectionTitle: {
-    fontFamily: "SF Pro Display, system-ui, -apple-system, sans-serif",
-    fontSize: 20,
-    fontWeight: 600,
-    color: "#1d1d1f",
-    marginBottom: 16,
-  },
-  muted: {
-    color: "#86868b",
-    textAlign: "center" as const,
-    padding: "24px 0",
-  },
-  error: {
-    color: "#ff3b30",
-    textAlign: "center" as const,
-    padding: "40px 0",
-  },
-};

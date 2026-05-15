@@ -28,19 +28,23 @@ export default function CopyButton({ text }: Props) {
     <button
       onClick={handleCopy}
       title="Copy to clipboard"
-      style={{
-        padding: "3px 10px",
-        background: copied ? "#e8f8ed" : "#f5f5f7",
-        border: "1px solid #e0e0e0",
-        borderRadius: 6,
-        fontSize: 12,
-        color: copied ? "#34c759" : "#1d1d1f",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        transition: "background 0.2s, color 0.2s",
-      }}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all duration-150 border cursor-pointer ${
+        copied
+          ? "bg-success-bg text-success border-success/30"
+          : "bg-accent-muted text-accent border-accent/20 hover:bg-accent/20 hover:border-accent/30"
+      }`}
     >
-      {copied ? "Copied!" : "Copy"}
+      {copied ? (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
+      {copied ? "Copied" : "Copy"}
     </button>
   );
 }
