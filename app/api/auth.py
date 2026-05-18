@@ -11,6 +11,7 @@ from app.config import settings
 from app.db import get_session
 from app.models import User
 from app.schemas import LoginRequest, LoginResponse
+from app.security import get_client_ip
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -40,7 +41,7 @@ async def get_current_user(request: Request, session: AsyncSession = Depends(get
 
 @router.post("/login", response_model=LoginResponse)
 async def login(body: LoginRequest, request: Request, response: Response, session: AsyncSession = Depends(get_session)):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     now = time.time()
     attempts = _login_attempts[client_ip]
     attempts[:] = [t for t in attempts if now - t < LOCKOUT_SECONDS]
@@ -54,7 +55,11 @@ async def login(body: LoginRequest, request: Request, response: Response, sessio
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     attempts.clear()
-    is_https = str(request.url.scheme) == "https"
+    is_https = (
+        settings.force_https_cookies
+        or str(request.url.scheme) == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+    )
     token = create_access_token(user.id)
     response.set_cookie(
         key=COOKIE_NAME,

@@ -2,7 +2,8 @@ import logging
 import time
 
 import httpx
-from jose import jwt, JWTError
+import jwt
+from jwt.exceptions import PyJWTError
 
 from fastapi import Request
 
@@ -59,7 +60,7 @@ async def verify_gchat(route: WebhookRoute, request: Request, body: bytes) -> st
             audience=settings.public_base_url,
             issuer="chat@system.gserviceaccount.com",
         )
-    except JWTError as e:
+    except PyJWTError as e:
         return f"JWT verification failed: {e}"
     except Exception as e:
         logger.error(f"Google Chat verification error: {e}")

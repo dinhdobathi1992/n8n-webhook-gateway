@@ -1,7 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import RouteCreate
+from app.config import settings
+from app.schemas import ChannelRuleCreate, RouteCreate
 
 
 def test_valid_slug():
@@ -29,9 +30,39 @@ def test_destination_url_must_be_http():
         RouteCreate(slug="ok", destination_url="ftp://bad.com")
 
 
+def test_destination_url_blocks_private_ip():
+    with pytest.raises(ValidationError, match="blocked private/internal"):
+        RouteCreate(slug="ok", destination_url="http://127.0.0.1/hook", signing_secret="test")
+
+
+def test_destination_url_allows_private_ip_when_host_allowlisted():
+    old_hosts = settings.allowed_internal_hosts
+    try:
+        settings.allowed_internal_hosts = "127.0.0.1"
+        r = RouteCreate(slug="ok", destination_url="http://127.0.0.1/hook", signing_secret="test")
+        assert r.destination_url == "http://127.0.0.1/hook"
+    finally:
+        settings.allowed_internal_hosts = old_hosts
+
+
 def test_destination_url_https():
     r = RouteCreate(slug="ok", destination_url="https://good.com/webhook", signing_secret="test")
     assert r.destination_url == "https://good.com/webhook"
+
+
+def test_workflow_url_must_be_http():
+    with pytest.raises(ValidationError, match="workflow_url must start"):
+        RouteCreate(
+            slug="ok",
+            destination_url="https://example.com/hook",
+            workflow_url="javascript:alert(1)",
+            signing_secret="test",
+        )
+
+
+def test_channel_rule_blocks_private_destination():
+    with pytest.raises(ValidationError, match="blocked private/internal"):
+        ChannelRuleCreate(channel_id="C123", destination_url="http://169.254.169.254/latest")
 
 
 def test_signing_secret_required():

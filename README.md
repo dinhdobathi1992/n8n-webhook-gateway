@@ -21,7 +21,7 @@ n8n webhooks are public URLs. This gateway adds:
 ```bash
 git clone https://github.com/dinhdobathi1992/n8n-webhook-gateway
 cd n8n-webhook-gateway
-cp .env.example .env    # edit SECRET_KEY and ADMIN_PASSWORD
+cp .env.example .env    # edit SECRET_KEY, ENCRYPTION_KEY, and ADMIN_PASSWORD
 docker compose up -d
 # open http://localhost:3000
 ```
@@ -48,13 +48,22 @@ Login: `admin` / `admin` (change in `.env`)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SECRET_KEY` | `change-me` | JWT signing + field encryption key. **Change this.** |
+| `SECRET_KEY` | `change-me` | JWT signing key. **Change this in production.** |
+| `ENCRYPTION_KEY` | unset | Field encryption key for secrets. **Required in production.** |
+| `LEGACY_ENCRYPTION_KEYS` | unset | Comma-separated old encryption keys for decrypting existing rows during rotation |
+| `ALLOW_WEAK_SECRETS` | `false` | Allows weak local defaults when `true`; never enable in production |
 | `ADMIN_USERNAME` | `admin` | Login username |
 | `ADMIN_PASSWORD` | `admin` | Login password |
 | `PUBLIC_BASE_URL` | `http://localhost:3000` | Shown in webhook URLs, used as gchat JWT audience |
+| `FORCE_HTTPS_COOKIES` | `true` | Always set Secure on session cookies |
+| `TRUSTED_PROXY_DEPTH` | `0` | Number of trusted proxies for `X-Forwarded-For` client IP extraction |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./gateway.db` | DB connection |
 | `FORWARD_TIMEOUT_SECONDS` | `30` | Per-attempt timeout |
 | `FORWARD_MAX_RETRIES` | `3` | Retry on 5xx/timeout |
+| `WEBHOOK_RATE_LIMIT_PER_MIN` | `200` | Per route/client inbound webhook limit; `0` disables |
+| `WEBHOOK_MAX_BODY_BYTES` | `1048576` | Max inbound webhook body size; `0` disables |
+| `ALLOWED_INTERNAL_HOSTS` | unset | Comma-separated hostnames/patterns allowed to resolve to private IPs |
+| `BLOCK_PRIVATE_DESTINATION_IPS` | `true` | Blocks forwarding to private/internal destination IPs |
 
 ## API
 

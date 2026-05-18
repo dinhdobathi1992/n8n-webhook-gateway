@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.auth import hash_password
+from app.auth import create_access_token, decode_access_token
 from app.config import settings
 from app.db import get_session
 from app.models import User
@@ -52,3 +53,8 @@ async def test_login_unknown_user(client: AsyncClient):
 async def test_logout(auth_client: AsyncClient):
     resp = await auth_client.post("/api/auth/logout")
     assert resp.status_code == 200
+
+
+def test_access_token_claims_decode():
+    token = create_access_token(123)
+    assert decode_access_token(token) == 123

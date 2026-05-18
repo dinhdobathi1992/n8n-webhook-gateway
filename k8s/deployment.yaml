@@ -15,6 +15,12 @@ spec:
       labels:
         app: n8n-webhook-gateway
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: n8n-webhook-gateway
           image: dinhdobathi/n8n-webhook-gateway:latest
@@ -23,9 +29,15 @@ spec:
           env:
             - name: PORT
               value: "3000"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
           envFrom:
             - secretRef:
                 name: n8n-webhook-gateway-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               cpu: 50m

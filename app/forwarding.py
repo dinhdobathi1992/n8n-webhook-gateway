@@ -3,11 +3,13 @@ import hmac
 import logging
 import time
 import uuid
+import asyncio
 from dataclasses import dataclass
 
 import httpx
 
 from app.config import settings
+from app.url_security import assert_destination_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +77,19 @@ async def forward_request(
     if query_string:
         url = f"{destination_url}?{query_string}"
 
+    try:
+        await asyncio.to_thread(assert_destination_allowed, url)
+    except ValueError as exc:
+        return ForwardResult(
+            delivery_id=delivery_id,
+            status="failed",
+            attempt_count=0,
+            response_status=None,
+            response_body_excerpt=None,
+            error=str(exc),
+            latency_ms=0,
+        )
+
     attempt_count = 0
     last_error: str | None = None
     last_status: int | None = None
@@ -102,7 +117,6 @@ async def forward_request(
                 logger.warning(f"[{slug}] attempt {attempt} failed: {exc}")
 
             if attempt < settings.forward_max_retries:
-                import asyncio
                 await asyncio.sleep(settings.forward_retry_base_seconds * (2 ** (attempt - 1)))
 
     elapsed = int(time.time() * 1000) - start_ms

@@ -17,6 +17,13 @@ spec:
       labels:
         app: n8n-webhook-gateway-app
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
         - name: awsecr-cred
       volumes:
@@ -27,6 +34,10 @@ spec:
         - name: db-migrate
           image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1805-latest
           command: ["python3", "scripts/migrate.py", "/data/gateway.db"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: data
               mountPath: /data
@@ -40,9 +51,15 @@ spec:
               value: "3000"
             - name: DATABASE_URL
               value: "sqlite+aiosqlite:////data/gateway.db"
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
           envFrom:
             - secretRef:
                 name: n8n-webhook-gateway-app-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: data
               mountPath: /data

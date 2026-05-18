@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from app.forwarding import ForwardResult, sign_gateway_payload, verify_slack_signature
+from app.forwarding import ForwardResult, forward_request, sign_gateway_payload, verify_slack_signature
 
 
 def test_verify_slack_signature_valid():
@@ -48,3 +48,17 @@ def test_forward_result_fields():
     )
     assert r.status == "success"
     assert r.delivery_id == "abc"
+
+
+async def test_forward_request_blocks_private_destination():
+    result = await forward_request(
+        destination_url="http://127.0.0.1:9/internal",
+        method="POST",
+        body=b"{}",
+        headers={"content-type": "application/json"},
+        query_string="",
+        slug="blocked",
+    )
+    assert result.status == "failed"
+    assert result.attempt_count == 0
+    assert "blocked private/internal" in (result.error or "")

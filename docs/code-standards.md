@@ -76,7 +76,7 @@ async def lifespan(application: FastAPI):
 - Passwords hashed with bcrypt (auto-salted)
 - JWT tokens signed with HS256, 24h expiry
 - httpOnly cookies (no JS access to token)
-- Secure cookie flag derived from PUBLIC_BASE_URL scheme
+- Secure cookie flag forced by `FORCE_HTTPS_COOKIES` in production
 - CORS restricted to single origin (PUBLIC_BASE_URL)
 - Path traversal check on static file serving: `file_path.is_relative_to(ui_dist.resolve())`
 - Slack signature verification uses `hmac.compare_digest` (timing-safe comparison)

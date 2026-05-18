@@ -179,6 +179,8 @@ export default function RouteDetail() {
         <ChannelRules
           routeId={route.id}
           rules={route.channel_rules}
+          defaultDestinationUrl={route.destination_url}
+          defaultWorkflowUrl={route.workflow_url}
           onUpdate={fetchRoute}
         />
       )}

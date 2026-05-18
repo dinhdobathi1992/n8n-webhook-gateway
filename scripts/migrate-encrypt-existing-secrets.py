@@ -1,13 +1,25 @@
-"""One-time migration: encrypt existing plaintext secrets in DB."""
+"""One-time migration: encrypt or re-encrypt existing DB secrets."""
+import os
 import sqlite3
 import sys
-import os
+
+from cryptography.fernet import InvalidToken
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.crypto import encrypt
+from app.crypto import decrypt, encrypt
 
 DB_PATH = os.environ.get("DB_PATH", "gateway.db")
+
+
+def normalize_secret(value: str | None) -> str | None:
+    if not value:
+        return value
+    try:
+        plaintext = decrypt(value)
+    except InvalidToken:
+        plaintext = value
+    return encrypt(plaintext)
 
 
 def migrate():
@@ -17,8 +29,8 @@ def migrate():
 
     updated = 0
     for row_id, signing_secret, auth_header_value in rows:
-        new_ss = encrypt(signing_secret) if signing_secret and not signing_secret.startswith("gAAAAA") else signing_secret
-        new_ahv = encrypt(auth_header_value) if auth_header_value and not auth_header_value.startswith("gAAAAA") else auth_header_value
+        new_ss = normalize_secret(signing_secret)
+        new_ahv = normalize_secret(auth_header_value)
 
         if new_ss != signing_secret or new_ahv != auth_header_value:
             cur.execute(

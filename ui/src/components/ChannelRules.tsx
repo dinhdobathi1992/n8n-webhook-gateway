@@ -5,10 +5,18 @@ import type { ChannelRule } from "../lib/api";
 interface Props {
   routeId: number;
   rules: ChannelRule[];
+  defaultDestinationUrl: string;
+  defaultWorkflowUrl: string | null;
   onUpdate: () => void;
 }
 
-export default function ChannelRules({ routeId, rules, onUpdate }: Props) {
+export default function ChannelRules({
+  routeId,
+  rules,
+  defaultDestinationUrl,
+  defaultWorkflowUrl,
+  onUpdate,
+}: Props) {
   const [showForm, setShowForm] = useState(false);
   const [channelId, setChannelId] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
@@ -18,14 +26,14 @@ export default function ChannelRules({ routeId, rules, onUpdate }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function handleAdd() {
-    if (!channelId || !destinationUrl) return;
+    if (!channelId) return;
     setError("");
     setLoading(true);
     try {
       await api.createChannelRule(routeId, {
         channel_id: channelId,
-        destination_url: destinationUrl,
-        workflow_url: workflowUrl || undefined,
+        destination_url: destinationUrl || defaultDestinationUrl,
+        workflow_url: workflowUrl || defaultWorkflowUrl || undefined,
         description: description || undefined,
       });
       setChannelId("");
@@ -88,6 +96,9 @@ export default function ChannelRules({ routeId, rules, onUpdate }: Props) {
               {error}
             </div>
           )}
+          <p className="text-xs text-text-muted mb-3">
+            Add a channel ID to allow it. Set URL overrides only when this channel should use a different n8n workflow.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-text-secondary">Channel ID</label>
@@ -100,23 +111,23 @@ export default function ChannelRules({ routeId, rules, onUpdate }: Props) {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-text-secondary">N8N Webhook URL</label>
+              <label className="text-xs font-medium text-text-secondary">Override Webhook URL</label>
               <input
                 className={inputClass}
                 type="url"
                 value={destinationUrl}
                 onChange={(e) => setDestinationUrl(e.target.value)}
-                placeholder="https://n8n.example.com/webhook/..."
+                placeholder="Leave empty to use route default"
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-text-secondary">N8N Workflow URL</label>
+              <label className="text-xs font-medium text-text-secondary">Override Workflow URL</label>
               <input
                 className={inputClass}
                 type="url"
                 value={workflowUrl}
                 onChange={(e) => setWorkflowUrl(e.target.value)}
-                placeholder="https://n8n.example.com/workflow/123"
+                placeholder="Leave empty to use route default"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -139,7 +150,7 @@ export default function ChannelRules({ routeId, rules, onUpdate }: Props) {
             </button>
             <button
               onClick={handleAdd}
-              disabled={loading || !channelId || !destinationUrl}
+              disabled={loading || !channelId}
               className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-accent-text rounded-md text-sm font-medium transition-colors disabled:opacity-50"
             >
               {loading ? "Adding..." : "Add"}

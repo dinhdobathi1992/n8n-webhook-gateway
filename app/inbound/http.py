@@ -1,4 +1,6 @@
 import json
+import time
+from collections import defaultdict
 
 from fastapi import APIRouter, Request, Response, Depends
 from fastapi.responses import JSONResponse
@@ -12,14 +14,56 @@ from app.inbound.verify_gchat import verify_gchat
 from app.inbound.verify_generic import verify_generic
 from app.inbound.verify_slack import verify_slack
 from app.models import DeliveryAttempt, WebhookRoute
+from app.config import settings
+from app.security import get_client_ip
 
 router = APIRouter()
+_webhook_attempts: dict[str, list[float]] = defaultdict(list)
 
 VERIFIERS = {
     "slack": verify_slack,
     "gchat": verify_gchat,
     "generic": verify_generic,
 }
+
+
+def clear_webhook_rate_limits():
+    _webhook_attempts.clear()
+
+
+def _rate_limited(route_key: str) -> bool:
+    if settings.webhook_rate_limit_per_min <= 0:
+        return False
+    now = time.time()
+    attempts = _webhook_attempts[route_key]
+    attempts[:] = [t for t in attempts if now - t < 60]
+    if len(attempts) >= settings.webhook_rate_limit_per_min:
+        return True
+    attempts.append(now)
+    return False
+
+
+async def _read_body_limited(request: Request) -> bytes | JSONResponse:
+    max_bytes = settings.webhook_max_body_bytes
+    if max_bytes <= 0:
+        return await request.body()
+
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > max_bytes:
+                return JSONResponse(status_code=413, content={"detail": "Payload too large"})
+        except ValueError:
+            return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
+
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > max_bytes:
+            return JSONResponse(status_code=413, content={"detail": "Payload too large"})
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _extract_channel_id(body: bytes) -> str | None:
@@ -49,7 +93,14 @@ async def inbound_webhook(
     if route is None:
         return JSONResponse(status_code=404, content={"detail": "Route not found"})
 
-    body = await request.body()
+    rate_key = f"{route.slug}:{get_client_ip(request)}"
+    if _rate_limited(rate_key):
+        return JSONResponse(status_code=429, content={"detail": "Too many webhook requests"})
+
+    body_or_response = await _read_body_limited(request)
+    if isinstance(body_or_response, JSONResponse):
+        return body_or_response
+    body = body_or_response
 
     verifier = VERIFIERS.get(route.source_type)
     if verifier:

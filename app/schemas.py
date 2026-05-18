@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
 
+from app.url_security import validate_http_url
+
 SLUG_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 RESERVED_SLUGS = {"api", "health", "docs", "openapi.json", "redoc", "ui"}
 
@@ -42,9 +44,12 @@ class RouteCreate(BaseModel):
     @field_validator("destination_url")
     @classmethod
     def validate_destination(cls, v: str) -> str:
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("destination_url must start with http:// or https://")
-        return v
+        return validate_http_url(v, field_name="destination_url", destination=True) or v
+
+    @field_validator("workflow_url")
+    @classmethod
+    def validate_workflow_url(cls, v: str | None) -> str | None:
+        return validate_http_url(v, field_name="workflow_url", destination=False)
 
     @model_validator(mode="after")
     def validate_source_fields(self):
@@ -74,9 +79,12 @@ class RouteUpdate(BaseModel):
     @field_validator("destination_url")
     @classmethod
     def validate_destination(cls, v: str | None) -> str | None:
-        if v is not None and not v.startswith(("http://", "https://")):
-            raise ValueError("destination_url must start with http:// or https://")
-        return v
+        return validate_http_url(v, field_name="destination_url", destination=True)
+
+    @field_validator("workflow_url")
+    @classmethod
+    def validate_workflow_url(cls, v: str | None) -> str | None:
+        return validate_http_url(v, field_name="workflow_url", destination=False)
 
 
 class ChannelRuleCreate(BaseModel):
@@ -95,9 +103,12 @@ class ChannelRuleCreate(BaseModel):
     @field_validator("destination_url")
     @classmethod
     def validate_destination(cls, v: str) -> str:
-        if not v.startswith(("http://", "https://")):
-            raise ValueError("destination_url must start with http:// or https://")
-        return v
+        return validate_http_url(v, field_name="destination_url", destination=True) or v
+
+    @field_validator("workflow_url")
+    @classmethod
+    def validate_workflow_url(cls, v: str | None) -> str | None:
+        return validate_http_url(v, field_name="workflow_url", destination=False)
 
 
 class ChannelRuleResponse(BaseModel):

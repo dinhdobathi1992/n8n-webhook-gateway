@@ -13,6 +13,12 @@ from app.models import Base
 
 # Force http for tests so secure cookie flag is off
 settings.public_base_url = "http://localhost:3000"
+settings.secret_key = "test-secret-key-with-at-least-32-characters"
+settings.encryption_key = "test-encryption-key-with-at-least-32-chars"
+settings.force_https_cookies = False
+settings.allow_weak_secrets = True
+settings.webhook_rate_limit_per_min = 200
+settings.webhook_max_body_bytes = 1_048_576
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test_gateway.db"
 

@@ -19,9 +19,13 @@ Edit `.env` -- **must change these for production**:
 
 ```env
 SECRET_KEY=<generate-random-64-char-string>
+ENCRYPTION_KEY=<generate-different-random-64-char-string>
+ALLOW_WEAK_SECRETS=false
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<strong-password>
 PUBLIC_BASE_URL=https://your-domain.com
+FORCE_HTTPS_COOKIES=true
+TRUSTED_PROXY_DEPTH=1
 ```
 
 Generate a secret key:
@@ -111,9 +115,14 @@ type: Opaque
 stringData:
   DATABASE_URL: "sqlite+aiosqlite:///./gateway.db"
   SECRET_KEY: "<generate-random-secret>"
+  ENCRYPTION_KEY: "<generate-different-random-secret>"
+  ALLOW_WEAK_SECRETS: "false"
   ADMIN_USERNAME: "admin"
   ADMIN_PASSWORD: "<strong-password>"
   PUBLIC_BASE_URL: "https://your-ingress-hostname"
+  FORCE_HTTPS_COOKIES: "true"
+  TRUSTED_PROXY_DEPTH: "1"
+  ALLOWED_INTERNAL_HOSTS: "your-n8n-host.example.com"
 ```
 
 **Never commit `k8s/secret.yaml` to git.** The `.gitignore` should exclude it (only `secret.yaml.example` is tracked).
@@ -227,13 +236,22 @@ pytest -x       # stop on first failure
 |----------|----------|---------|-------|
 | `PORT` | No | `3000` | Server listen port |
 | `DATABASE_URL` | No | `sqlite+aiosqlite:///./gateway.db` | SQLAlchemy async URL |
-| `SECRET_KEY` | **Yes** (production) | `change-me` | JWT signing -- weak default warns on startup |
+| `SECRET_KEY` | **Yes** (production) | `change-me` | JWT signing key -- weak values fail startup unless explicitly allowed |
+| `ENCRYPTION_KEY` | **Yes** (production) | unset | Fernet field encryption key; must differ from `SECRET_KEY` |
+| `LEGACY_ENCRYPTION_KEYS` | No | unset | Comma-separated old encryption keys for secret rotation |
+| `ALLOW_WEAK_SECRETS` | No | `false` | Local-dev escape hatch for weak defaults |
 | `ADMIN_USERNAME` | No | `admin` | First admin user |
 | `ADMIN_PASSWORD` | No | `admin` | First admin password |
 | `PUBLIC_BASE_URL` | **Yes** (production) | `http://localhost:3000` | CORS origin + webhook URL generation |
+| `FORCE_HTTPS_COOKIES` | No | `true` | Force Secure session cookies in production |
+| `TRUSTED_PROXY_DEPTH` | No | `0` | Number of trusted proxies for client IP extraction |
 | `FORWARD_TIMEOUT_SECONDS` | No | `30` | Per-attempt HTTP timeout |
 | `FORWARD_MAX_RETRIES` | No | `3` | Max forwarding attempts |
 | `FORWARD_RETRY_BASE_SECONDS` | No | `1` | Backoff base delay |
+| `WEBHOOK_RATE_LIMIT_PER_MIN` | No | `200` | Per route/client webhook request limit |
+| `WEBHOOK_MAX_BODY_BYTES` | No | `1048576` | Max inbound webhook body bytes |
+| `ALLOWED_INTERNAL_HOSTS` | No | unset | Hostnames/patterns allowed to resolve to private IPs |
+| `BLOCK_PRIVATE_DESTINATION_IPS` | No | `true` | Blocks SSRF to private/internal IPs |
 
 ## Reverse Proxy (Optional)
 
@@ -262,7 +280,7 @@ curl https://your-domain.com/health
 
 ### Logs
 The application logs to stdout. Key log messages:
-- `WARNING: SECRET_KEY is weak or default` -- change your secret key
+- `Unsafe startup configuration` -- fix production secrets or use `ALLOW_WEAK_SECRETS=true` only for local development
 - `[slug] attempt N got 5xx, retrying` -- forwarding retry
 - `[slug] attempt N failed: <error>` -- connection/timeout error
 

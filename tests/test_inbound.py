@@ -11,6 +11,7 @@ from app.auth import hash_password
 from app.config import settings
 from app.db import get_session
 from app.forwarding import ForwardResult
+from app.inbound.http import clear_webhook_rate_limits
 from app.models import ChannelRule, User, WebhookRoute
 
 
@@ -183,6 +184,56 @@ async def test_generic_missing_header_401(mock_fwd: AsyncMock, client: AsyncClie
     resp = await client.post("/test-generic/webhook", json={"data": "test"})
     assert resp.status_code == 401
     mock_fwd.assert_not_called()
+
+
+@patch("app.inbound.http.forward_request")
+async def test_webhook_body_size_limit(mock_fwd: AsyncMock, client: AsyncClient):
+    old_limit = settings.webhook_max_body_bytes
+    try:
+        settings.webhook_max_body_bytes = 4
+        body = b'{"too":"large"}'
+        timestamp = str(int(time.time()))
+        sig_base = f"v0:{timestamp}:{body.decode()}"
+        sig = "v0=" + hmac_mod.new(b"inbound-secret", sig_base.encode(), hashlib.sha256).hexdigest()
+        resp = await client.post(
+            "/test-inbound/webhook",
+            content=body,
+            headers={
+                "content-type": "application/json",
+                "x-slack-request-timestamp": timestamp,
+                "x-slack-signature": sig,
+            },
+        )
+        assert resp.status_code == 413
+        mock_fwd.assert_not_called()
+    finally:
+        settings.webhook_max_body_bytes = old_limit
+
+
+@patch("app.inbound.http.forward_request")
+async def test_webhook_rate_limit(mock_fwd: AsyncMock, client: AsyncClient):
+    old_limit = settings.webhook_rate_limit_per_min
+    clear_webhook_rate_limits()
+    try:
+        settings.webhook_rate_limit_per_min = 1
+        mock_fwd.return_value = _mock_forward_result()
+        body = b'{"event":"test"}'
+        timestamp = str(int(time.time()))
+        sig_base = f"v0:{timestamp}:{body.decode()}"
+        sig = "v0=" + hmac_mod.new(b"inbound-secret", sig_base.encode(), hashlib.sha256).hexdigest()
+        headers = {
+            "content-type": "application/json",
+            "x-slack-request-timestamp": timestamp,
+            "x-slack-signature": sig,
+        }
+        first = await client.post("/test-inbound/webhook", content=body, headers=headers)
+        second = await client.post("/test-inbound/webhook", content=body, headers=headers)
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert mock_fwd.call_count == 1
+    finally:
+        settings.webhook_rate_limit_per_min = old_limit
+        clear_webhook_rate_limits()
 
 
 async def seed_channel_route(client: AsyncClient):

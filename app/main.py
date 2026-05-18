@@ -13,16 +13,18 @@ from app.auth import hash_password
 from app.config import settings
 from app.db import engine, get_session
 from app.models import Base, User, WebhookRoute
+from app.security import startup_security_errors
 
 logger = logging.getLogger(__name__)
-
-WEAK_SECRETS = {"change-me", "change-me-to-random-secret", "secret", ""}
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    if settings.secret_key in WEAK_SECRETS:
-        logger.warning("SECRET_KEY is weak or default — set a strong random value before deploying to production")
+    security_errors = startup_security_errors()
+    if security_errors:
+        raise RuntimeError("Unsafe startup configuration: " + "; ".join(security_errors))
+    if settings.allow_weak_secrets:
+        logger.warning("ALLOW_WEAK_SECRETS is enabled — use only for local development")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     async for session in get_session():
@@ -46,6 +48,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    if settings.security_headers_enabled:
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+        if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
 
 from app.api.router import api_router  # noqa: E402
 
