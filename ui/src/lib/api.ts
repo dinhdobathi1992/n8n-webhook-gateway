@@ -46,6 +46,17 @@ export const api = {
     request<Delivery[]>(
       `/api/webhooks/${id}/deliveries?limit=${limit}&offset=${offset}`
     ),
+  listChannelRules: (routeId: number) =>
+    request<ChannelRule[]>(`/api/webhooks/${routeId}/channels`),
+  createChannelRule: (routeId: number, data: ChannelRuleCreate) =>
+    request<ChannelRule>(`/api/webhooks/${routeId}/channels`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteChannelRule: (routeId: number, ruleId: number) =>
+    request<{ ok: boolean }>(`/api/webhooks/${routeId}/channels/${ruleId}`, {
+      method: "DELETE",
+    }),
 };
 
 export interface Route {
@@ -59,7 +70,9 @@ export interface Route {
   auth_header_name: string | null;
   secret_header_name: string | null;
   description: string | null;
+  workflow_url: string | null;
   webhook_url: string;
+  channel_rules: ChannelRule[];
   created_at: string;
 }
 
@@ -71,6 +84,25 @@ export interface RouteCreate {
   secret_header_name?: string;
   auth_header_name?: string;
   auth_header_value?: string;
+  description?: string;
+  workflow_url?: string;
+  enabled?: boolean;
+}
+
+export interface ChannelRule {
+  id: number;
+  route_id: number;
+  channel_id: string;
+  destination_url: string;
+  workflow_url: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+export interface ChannelRuleCreate {
+  channel_id: string;
+  destination_url: string;
+  workflow_url?: string;
   description?: string;
 }
 

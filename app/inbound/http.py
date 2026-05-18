@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request, Response, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.db import get_session
 from app.forwarding import forward_request
@@ -21,6 +22,18 @@ VERIFIERS = {
 }
 
 
+def _extract_channel_id(body: bytes) -> str | None:
+    try:
+        payload = json.loads(body)
+        if isinstance(payload, dict):
+            event = payload.get("event")
+            if isinstance(event, dict):
+                return event.get("channel")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        pass
+    return None
+
+
 @router.api_route("/{slug}/webhook", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def inbound_webhook(
     slug: str,
@@ -28,7 +41,9 @@ async def inbound_webhook(
     session: AsyncSession = Depends(get_session),
 ):
     result = await session.execute(
-        select(WebhookRoute).where(WebhookRoute.slug == slug, WebhookRoute.enabled == True)  # noqa: E712
+        select(WebhookRoute)
+        .options(selectinload(WebhookRoute.channel_rules))
+        .where(WebhookRoute.slug == slug, WebhookRoute.enabled == True)  # noqa: E712
     )
     route = result.scalar_one_or_none()
     if route is None:
@@ -50,11 +65,31 @@ async def inbound_webhook(
         except (json.JSONDecodeError, UnicodeDecodeError):
             pass
 
+    # Channel-based routing: if route has channel rules, require a match
+    destination_url = route.destination_url
+    if route.channel_rules:
+        channel_id = _extract_channel_id(body)
+        if channel_id is None:
+            return JSONResponse(
+                status_code=200,
+                content={"detail": "No channel in payload, dropped"},
+            )
+        matched_rule = next(
+            (cr for cr in route.channel_rules if cr.channel_id == channel_id),
+            None,
+        )
+        if matched_rule is None:
+            return JSONResponse(
+                status_code=200,
+                content={"detail": f"No rule for channel {channel_id}, dropped"},
+            )
+        destination_url = matched_rule.destination_url
+
     headers = dict(request.headers)
     query_string = str(request.url.query) if request.url.query else ""
 
     fwd = await forward_request(
-        destination_url=route.destination_url,
+        destination_url=destination_url,
         method=request.method,
         body=body,
         headers=headers,

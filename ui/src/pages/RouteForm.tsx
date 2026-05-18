@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import type { ChannelRule } from "../lib/api";
 
 export default function RouteForm() {
   const { id } = useParams<{ id: string }>();
@@ -9,6 +10,7 @@ export default function RouteForm() {
 
   const [slug, setSlug] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
+  const [workflowUrl, setWorkflowUrl] = useState("");
   const [description, setDescription] = useState("");
   const [sourceType, setSourceType] = useState("slack");
   const [showSecret, setShowSecret] = useState(false);
@@ -17,6 +19,9 @@ export default function RouteForm() {
   const [showAuth, setShowAuth] = useState(false);
   const [authHeaderName, setAuthHeaderName] = useState("");
   const [authHeaderValue, setAuthHeaderValue] = useState("");
+  const [channelId, setChannelId] = useState("");
+  const [existingRules, setExistingRules] = useState<ChannelRule[]>([]);
+  const [newChannelId, setNewChannelId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +32,7 @@ export default function RouteForm() {
         .then((r) => {
           setSlug(r.slug);
           setDestinationUrl(r.destination_url);
+          setWorkflowUrl(r.workflow_url || "");
           setDescription(r.description || "");
           setSourceType(r.source_type || "slack");
           if (r.secret_header_name) setSecretHeaderName(r.secret_header_name);
@@ -35,6 +41,7 @@ export default function RouteForm() {
             setShowAuth(true);
             if (r.auth_header_name) setAuthHeaderName(r.auth_header_name);
           }
+          if (r.channel_rules) setExistingRules(r.channel_rules);
         })
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to load route")
@@ -49,6 +56,7 @@ export default function RouteForm() {
     try {
       if (isEdit) {
         const data: Record<string, string | undefined> = { destination_url: destinationUrl };
+        if (workflowUrl) data.workflow_url = workflowUrl;
         if (description) data.description = description;
         if (signingSecret) data.signing_secret = signingSecret;
         if (sourceType === "generic" && secretHeaderName) data.secret_header_name = secretHeaderName;
@@ -56,16 +64,25 @@ export default function RouteForm() {
         if (authHeaderValue) data.auth_header_value = authHeaderValue;
         await api.updateRoute(Number(id), data);
       } else {
-        await api.createRoute({
+        const route = await api.createRoute({
           slug,
           destination_url: destinationUrl,
           source_type: sourceType,
           description: description || undefined,
+          workflow_url: workflowUrl || undefined,
           signing_secret: sourceType !== "gchat" ? signingSecret : undefined,
           secret_header_name: sourceType === "generic" ? secretHeaderName : undefined,
           auth_header_name: authHeaderName || undefined,
           auth_header_value: authHeaderValue || undefined,
         });
+        if (channelId && sourceType === "slack") {
+          await api.createChannelRule(route.id, {
+            channel_id: channelId,
+            destination_url: destinationUrl,
+            workflow_url: workflowUrl || undefined,
+            description: description || undefined,
+          });
+        }
       }
       navigate("/");
     } catch (err) {
@@ -134,7 +151,7 @@ export default function RouteForm() {
               </label>
 
               <label className={labelClass}>
-                Destination URL
+                N8N Webhook URL
                 <input
                   className={inputClass}
                   type="url"
@@ -142,6 +159,17 @@ export default function RouteForm() {
                   onChange={(e) => setDestinationUrl(e.target.value)}
                   placeholder="https://n8n.example.com/webhook/..."
                   required
+                />
+              </label>
+
+              <label className={labelClass}>
+                N8N Workflow URL
+                <input
+                  className={inputClass}
+                  type="url"
+                  value={workflowUrl}
+                  onChange={(e) => setWorkflowUrl(e.target.value)}
+                  placeholder="https://n8n.example.com/workflow/123"
                 />
               </label>
 
@@ -211,20 +239,100 @@ export default function RouteForm() {
                         </label>
                       </div>
                     )}
+
+                    {/* Channel Rules for edit mode */}
+                    <div className="border-t border-border/60 pt-4 mt-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
+                          <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+                        </svg>
+                        <span className="text-xs font-semibold text-text-muted uppercase tracking-widest">Channel Rules</span>
+                      </div>
+                      <span className="text-xs text-text-muted block mb-3">Only forward events from these channels. Uses the Webhook/Workflow URLs above.</span>
+
+                      {existingRules.length > 0 && (
+                        <div className="flex flex-col gap-2 mb-3">
+                          {existingRules.map((rule) => (
+                            <div key={rule.id} className="flex items-center justify-between bg-bg/40 border border-border/60 rounded-lg px-3 py-2">
+                              <span className="text-sm font-mono text-text-primary">{rule.channel_id}</span>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!confirm("Remove this channel rule?")) return;
+                                  try {
+                                    await api.deleteChannelRule(Number(id), rule.id);
+                                    setExistingRules(existingRules.filter((r) => r.id !== rule.id));
+                                  } catch (err) {
+                                    alert(err instanceof Error ? err.message : "Delete failed");
+                                  }
+                                }}
+                                className="text-text-muted hover:text-error text-xs bg-transparent border-none cursor-pointer transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          className={inputClass}
+                          type="text"
+                          value={newChannelId}
+                          onChange={(e) => setNewChannelId(e.target.value)}
+                          placeholder="Channel ID (e.g. C0B3WDWKESH)"
+                        />
+                        <button
+                          type="button"
+                          disabled={!newChannelId}
+                          onClick={async () => {
+                            try {
+                              const rule = await api.createChannelRule(Number(id), {
+                                channel_id: newChannelId,
+                                destination_url: destinationUrl,
+                                workflow_url: workflowUrl || undefined,
+                                description: description || undefined,
+                              });
+                              setExistingRules([...existingRules, rule]);
+                              setNewChannelId("");
+                            } catch (err) {
+                              alert(err instanceof Error ? err.message : "Failed to add rule");
+                            }
+                          }}
+                          className="shrink-0 px-3 py-3 bg-accent hover:bg-accent-hover text-accent-text rounded-lg text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
                   </>
                 ) : (
-                  <label className={labelClass}>
-                    Slack Signing Secret
-                    <input
-                      className={inputClass}
-                      type="password"
-                      value={signingSecret}
-                      onChange={(e) => setSigningSecret(e.target.value)}
-                      placeholder="From Slack App > Basic Information"
-                      required
-                    />
-                    <span className="text-xs text-text-muted">Required for HMAC-SHA256 verification</span>
-                  </label>
+                  <>
+                    <label className={labelClass}>
+                      Slack Signing Secret
+                      <input
+                        className={inputClass}
+                        type="password"
+                        value={signingSecret}
+                        onChange={(e) => setSigningSecret(e.target.value)}
+                        placeholder="From Slack App > Basic Information"
+                        required
+                      />
+                      <span className="text-xs text-text-muted">Required for HMAC-SHA256 verification</span>
+                    </label>
+                    <label className={labelClass}>
+                      Channel ID
+                      <input
+                        className={inputClass}
+                        type="text"
+                        value={channelId}
+                        onChange={(e) => setChannelId(e.target.value)}
+                        placeholder="C0B3WDWKESH"
+                      />
+                      <span className="text-xs text-text-muted">Only forward events from this channel. Leave empty to forward all.</span>
+                    </label>
+                  </>
                 )
               )}
 

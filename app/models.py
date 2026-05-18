@@ -39,6 +39,7 @@ class WebhookRoute(Base):
     source_type: Mapped[str] = mapped_column(String(32), nullable=False, default="slack")
     secret_header_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    workflow_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -48,7 +49,24 @@ class WebhookRoute(Base):
     )
 
     creator: Mapped["User"] = relationship(back_populates="routes")
-    deliveries: Mapped[list["DeliveryAttempt"]] = relationship(back_populates="route")
+    deliveries: Mapped[list["DeliveryAttempt"]] = relationship(back_populates="route", cascade="all, delete-orphan")
+    channel_rules: Mapped[list["ChannelRule"]] = relationship(back_populates="route", cascade="all, delete-orphan")
+
+
+class ChannelRule(Base):
+    __tablename__ = "channel_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    route_id: Mapped[int] = mapped_column(Integer, ForeignKey("webhook_routes.id"), nullable=False)
+    channel_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    destination_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    workflow_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    route: Mapped["WebhookRoute"] = relationship(back_populates="channel_rules")
 
 
 class DeliveryAttempt(Base):

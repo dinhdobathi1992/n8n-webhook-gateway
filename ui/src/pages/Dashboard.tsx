@@ -26,8 +26,19 @@ export default function Dashboard({ onLogout }: Props) {
 
   useEffect(() => { fetchRoutes(); }, []);
 
+  async function handleToggle(id: number, enabled: boolean) {
+    const action = enabled ? "Enable" : "Disable";
+    if (!confirm(`${action} this route?`)) return;
+    try {
+      await api.updateRoute(id, { enabled });
+      await fetchRoutes();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : `Failed to ${action.toLowerCase()}`);
+    }
+  }
+
   async function handleDelete(id: number) {
-    if (!confirm("Disable this route?")) return;
+    if (!confirm("Permanently delete this route? This cannot be undone.")) return;
     try {
       await api.deleteRoute(id);
       await fetchRoutes();
@@ -48,7 +59,7 @@ export default function Dashboard({ onLogout }: Props) {
       <nav className="accent-bar border-b border-border bg-bg">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
+            <img src="/favicon.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
             <span className="text-accent font-bold text-sm sm:text-base tracking-tight">
               <span className="hidden sm:inline">n8n Webhook Gateway</span>
               <span className="sm:hidden">n8n Gateway</span>
@@ -107,7 +118,7 @@ export default function Dashboard({ onLogout }: Props) {
             </div>
           )}
           {!loading && routes.length > 0 && (
-            <RouteTable routes={routes} onDelete={handleDelete} />
+            <RouteTable routes={routes} onToggle={handleToggle} onDelete={handleDelete} />
           )}
         </main>
       </div>

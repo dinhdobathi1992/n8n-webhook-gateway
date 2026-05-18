@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: walle-n8n-test
+  namespace: preprod
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite /n8n/webhook-test/b74dfd7f-4be8-4a5e-a9a2-5ffc4d441941 /webhook/b74dfd7f-4be8-4a5e-a9a2-5ffc4d441941/webhook break;
+      access_by_lua_block {
+          ngx.req.read_body()
+          local body = ngx.req.get_body_data()
+          if body then
+              local cjson = require("cjson")
+              local ok, data = pcall(cjson.decode, body)
+              if ok and data.type == "url_verification" and data.challenge then
+                  ngx.header["Content-Type"] = "application/json"
+                  ngx.say(cjson.encode({challenge = data.challenge}))
+                  ngx.exit(ngx.HTTP_OK)
+              end
+          end
+      }
+    nginx.ingress.kubernetes.io/upstream-vhost: n8n-test.n8n.cactus.eks.aws.theiconic.com.au
+spec:
+  ingressClassName: external-ingress-nginx
+  rules:
+    - host: walle.preprod.snag.eks.aws.theiconic.com.au
+      http:
+        paths:
+          - path: /n8n/webhook-test/b74dfd7f-4be8-4a5e-a9a2-5ffc4d441941
+            pathType: Exact
+            backend:
+              service:
+                name: n8n-external
+                port:
+                  number: 443
+  tls:
+    - hosts:
+        - walle.preprod.snag.eks.aws.theiconic.com.au
+      secretName: walle-certificate

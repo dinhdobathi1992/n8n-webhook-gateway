@@ -28,6 +28,7 @@ class RouteCreate(BaseModel):
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None
+    workflow_url: str | None = None
 
     @field_validator("slug")
     @classmethod
@@ -68,6 +69,7 @@ class RouteUpdate(BaseModel):
     auth_header_name: str | None = None
     auth_header_value: str | None = None
     description: str | None = None
+    workflow_url: str | None = None
 
     @field_validator("destination_url")
     @classmethod
@@ -75,6 +77,39 @@ class RouteUpdate(BaseModel):
         if v is not None and not v.startswith(("http://", "https://")):
             raise ValueError("destination_url must start with http:// or https://")
         return v
+
+
+class ChannelRuleCreate(BaseModel):
+    channel_id: str
+    destination_url: str
+    workflow_url: str | None = None
+    description: str | None = None
+
+    @field_validator("channel_id")
+    @classmethod
+    def validate_channel_id(cls, v: str) -> str:
+        if not v or len(v) > 64:
+            raise ValueError("channel_id must be 1-64 characters")
+        return v
+
+    @field_validator("destination_url")
+    @classmethod
+    def validate_destination(cls, v: str) -> str:
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("destination_url must start with http:// or https://")
+        return v
+
+
+class ChannelRuleResponse(BaseModel):
+    id: int
+    route_id: int
+    channel_id: str
+    destination_url: str
+    workflow_url: str | None
+    description: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class RouteResponse(BaseModel):
@@ -88,7 +123,9 @@ class RouteResponse(BaseModel):
     auth_header_name: str | None
     secret_header_name: str | None
     description: str | None
+    workflow_url: str | None
     webhook_url: str
+    channel_rules: list["ChannelRuleResponse"] = []
     created_at: datetime
 
     model_config = {"from_attributes": True}

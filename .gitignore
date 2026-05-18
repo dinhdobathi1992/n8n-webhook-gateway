@@ -28,3 +28,7 @@ n8n-webhook-gateway.zip
 
 docs/superpowers/*
 CLAUDE.md
+
+zscaler.pem
+cloudflared-n8n-eks-plan.md
+Dockerfile.ecr

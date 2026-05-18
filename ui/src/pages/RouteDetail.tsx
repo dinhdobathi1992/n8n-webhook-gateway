@@ -5,6 +5,7 @@ import type { Delivery, Route } from "../lib/api";
 import CopyButton from "../components/CopyButton";
 import DeliveryLog from "../components/DeliveryLog";
 import TestPanel from "../components/TestPanel";
+import ChannelRules from "../components/ChannelRules";
 
 const sourceBadge: Record<string, string> = {
   slack: "bg-info-bg text-info border-info/20",
@@ -18,19 +19,21 @@ export default function RouteDetail() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  async function fetchRoute() {
     if (!id) return;
-    const routeId = Number(id);
-    api
-      .getRoute(routeId)
-      .then(setRoute)
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load route")
-      );
-    api
-      .getDeliveries(routeId)
-      .then(setDeliveries)
-      .catch(() => {});
+    try {
+      const r = await api.getRoute(Number(id));
+      setRoute(r);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load route");
+    }
+  }
+
+  useEffect(() => {
+    fetchRoute();
+    if (id) {
+      api.getDeliveries(Number(id)).then(setDeliveries).catch(() => {});
+    }
   }, [id]);
 
   function refreshDeliveries() {
@@ -107,9 +110,17 @@ export default function RouteDetail() {
 
         <div className="px-6 sm:px-8 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Destination</span>
+            <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">N8N Webhook URL</span>
             <span className="text-sm text-text-primary break-all leading-relaxed">{route.destination_url}</span>
           </div>
+          {route.workflow_url && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">N8N Workflow URL</span>
+              <a href={route.workflow_url} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:text-accent-hover break-all leading-relaxed transition-colors">
+                {route.workflow_url}
+              </a>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">Signing Secret</span>
             <span className="text-sm text-text-secondary">
@@ -163,6 +174,14 @@ export default function RouteDetail() {
         </div>
         <TestPanel webhookUrl={route.webhook_url} onSent={refreshDeliveries} />
       </div>
+
+      {route.source_type === "slack" && (
+        <ChannelRules
+          routeId={route.id}
+          rules={route.channel_rules}
+          onUpdate={fetchRoute}
+        />
+      )}
 
       <div className="mt-10 mb-6">
         <div className="flex items-center justify-between mb-4">

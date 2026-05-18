@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n-webhook-gateway-app
+  namespace: platformbot
+  labels:
+    app: n8n-webhook-gateway-app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: n8n-webhook-gateway-app
+  template:
+    metadata:
+      labels:
+        app: n8n-webhook-gateway-app
+    spec:
+      imagePullSecrets:
+        - name: awsecr-cred
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: n8n-webhook-gateway-app-data
+      initContainers:
+        - name: db-migrate
+          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1805-latest
+          command: ["python3", "scripts/migrate.py", "/data/gateway.db"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: n8n-webhook-gateway-app
+          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1805-latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_URL
+              value: "sqlite+aiosqlite:////data/gateway.db"
+          envFrom:
+            - secretRef:
+                name: n8n-webhook-gateway-app-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 10

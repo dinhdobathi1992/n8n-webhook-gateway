@@ -3,7 +3,7 @@
 *.db
 __pycache__/
 ui/node_modules/
-ui/dist/
+!ui/dist/
 n8n-webhook-gateway/
 n8n-webhook-gateway.zip
 k8s/secret.yaml

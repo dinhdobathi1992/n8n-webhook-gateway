@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.auth import get_current_user
 from app.config import settings
 from app.db import get_session
 from app.models import DeliveryAttempt, User, WebhookRoute
-from app.schemas import DeliveryResponse, RouteCreate, RouteResponse, RouteUpdate
+from app.schemas import ChannelRuleResponse, DeliveryResponse, RouteCreate, RouteResponse, RouteUpdate
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"], dependencies=[Depends(get_current_user)])
 
@@ -23,8 +24,21 @@ def _to_response(route: WebhookRoute) -> RouteResponse:
         auth_header_name=route.auth_header_name,
         secret_header_name=route.secret_header_name,
         description=route.description,
+        workflow_url=route.workflow_url,
         webhook_url=f"{settings.public_base_url}/{route.slug}/webhook",
         created_at=route.created_at,
+        channel_rules=[
+            ChannelRuleResponse(
+                id=cr.id,
+                route_id=cr.route_id,
+                channel_id=cr.channel_id,
+                destination_url=cr.destination_url,
+                workflow_url=cr.workflow_url,
+                description=cr.description,
+                created_at=cr.created_at,
+            )
+            for cr in route.channel_rules
+        ],
     )
 
 
@@ -46,24 +60,30 @@ async def create_route(
         auth_header_name=body.auth_header_name,
         auth_header_value=body.auth_header_value,
         description=body.description,
+        workflow_url=body.workflow_url,
         created_by=user.id,
     )
     session.add(route)
     await session.commit()
     await session.refresh(route)
+    await session.refresh(route, attribute_names=["channel_rules"])
     return _to_response(route)
 
 
 @router.get("", response_model=list[RouteResponse])
 async def list_routes(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(WebhookRoute).order_by(WebhookRoute.id))
+    result = await session.execute(
+        select(WebhookRoute).options(selectinload(WebhookRoute.channel_rules)).order_by(WebhookRoute.id)
+    )
     routes = result.scalars().all()
     return [_to_response(r) for r in routes]
 
 
 @router.get("/{route_id}", response_model=RouteResponse)
 async def get_route(route_id: int, session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(WebhookRoute).where(WebhookRoute.id == route_id))
+    result = await session.execute(
+        select(WebhookRoute).options(selectinload(WebhookRoute.channel_rules)).where(WebhookRoute.id == route_id)
+    )
     route = result.scalar_one_or_none()
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found")
@@ -92,8 +112,11 @@ async def update_route(
         route.auth_header_value = body.auth_header_value
     if body.description is not None:
         route.description = body.description
+    if body.workflow_url is not None:
+        route.workflow_url = body.workflow_url
     await session.commit()
     await session.refresh(route)
+    await session.refresh(route, attribute_names=["channel_rules"])
     return _to_response(route)
 
 
@@ -103,7 +126,7 @@ async def delete_route(route_id: int, session: AsyncSession = Depends(get_sessio
     route = result.scalar_one_or_none()
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found")
-    route.enabled = False
+    await session.delete(route)
     await session.commit()
     return {"ok": True}
 

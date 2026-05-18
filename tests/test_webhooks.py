@@ -90,13 +90,21 @@ async def test_update_route(auth_client: AsyncClient):
     assert resp.json()["enabled"] is False
 
 
-async def test_delete_route_soft_disables(auth_client: AsyncClient):
+async def test_delete_route_removes_from_db(auth_client: AsyncClient):
     create = await auth_client.post("/api/webhooks", json={"slug": "del-me", **ROUTE_BASE})
     route_id = create.json()["id"]
     resp = await auth_client.delete(f"/api/webhooks/{route_id}")
     assert resp.status_code == 200
     get_resp = await auth_client.get(f"/api/webhooks/{route_id}")
-    assert get_resp.json()["enabled"] is False
+    assert get_resp.status_code == 404
+
+
+async def test_disable_route_via_patch(auth_client: AsyncClient):
+    create = await auth_client.post("/api/webhooks", json={"slug": "dis-me", **ROUTE_BASE})
+    route_id = create.json()["id"]
+    resp = await auth_client.patch(f"/api/webhooks/{route_id}", json={"enabled": False})
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is False
 
 
 async def test_unauthenticated_rejected(client: AsyncClient):

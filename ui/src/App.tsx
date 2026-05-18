@@ -22,16 +22,23 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={<Dashboard onLogout={() => setAuthed(false)} />}
-        />
-        <Route path="/routes/new" element={<RouteForm />} />
-        <Route path="/routes/:id/edit" element={<RouteForm />} />
-        <Route path="/routes/:id" element={<RouteDetail />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1">
+          <Routes>
+            <Route
+              path="/"
+              element={<Dashboard onLogout={() => setAuthed(false)} />}
+            />
+            <Route path="/routes/new" element={<RouteForm />} />
+            <Route path="/routes/:id/edit" element={<RouteForm />} />
+            <Route path="/routes/:id" element={<RouteDetail />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+        <footer className="border-t border-border py-4 text-center text-[11px] text-text-muted tracking-wide">
+          TheIconic property — built by Platform Team for n8n private webhook routing
+        </footer>
+      </div>
     </BrowserRouter>
   );
 }

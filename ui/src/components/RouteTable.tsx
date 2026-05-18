@@ -4,6 +4,7 @@ import CopyButton from "./CopyButton";
 
 interface Props {
   routes: Route[];
+  onToggle: (id: number, enabled: boolean) => void;
   onDelete: (id: number) => void;
 }
 
@@ -17,7 +18,7 @@ const sourceBadge: Record<string, string> = {
   generic: "bg-[#8b5cf6]/8 text-[#8b5cf6] border-[#8b5cf6]/20",
 };
 
-export default function RouteTable({ routes, onDelete }: Props) {
+export default function RouteTable({ routes, onToggle, onDelete }: Props) {
   return (
     <>
       {/* Desktop table */}
@@ -27,7 +28,7 @@ export default function RouteTable({ routes, onDelete }: Props) {
             <tr className="bg-surface-elevated/50">
               <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">Slug</th>
               <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">Source</th>
-              <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">Destination</th>
+              <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">N8N Webhook URL</th>
               <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">Status</th>
               <th className="text-left px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">Webhook URL</th>
               <th className="text-right px-5 py-3.5 text-[11px] font-semibold text-text-muted uppercase tracking-widest border-b border-border">Actions</th>
@@ -82,6 +83,16 @@ export default function RouteTable({ routes, onDelete }: Props) {
                       Edit
                     </Link>
                     <button
+                      onClick={() => onToggle(r.id, !r.enabled)}
+                      className={`px-2.5 py-1 bg-transparent border-none text-[13px] font-medium cursor-pointer transition-all duration-150 rounded-md ${
+                        r.enabled
+                          ? "text-text-secondary hover:text-warning hover:bg-warning/8"
+                          : "text-text-secondary hover:text-success hover:bg-success/8"
+                      }`}
+                    >
+                      {r.enabled ? "Disable" : "Enable"}
+                    </button>
+                    <button
                       onClick={() => onDelete(r.id)}
                       className="px-2.5 py-1 bg-transparent border-none text-text-secondary hover:text-error hover:bg-error-bg text-[13px] font-medium cursor-pointer transition-all duration-150 rounded-md"
                     >
@@ -130,6 +141,14 @@ export default function RouteTable({ routes, onDelete }: Props) {
                 >
                   Edit
                 </Link>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggle(r.id, !r.enabled); }}
+                  className={`px-2 py-1 bg-transparent border-none text-xs cursor-pointer transition-colors ${
+                    r.enabled ? "text-text-muted hover:text-warning" : "text-text-muted hover:text-success"
+                  }`}
+                >
+                  {r.enabled ? "Disable" : "Enable"}
+                </button>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(r.id); }}
                   className="px-2 py-1 bg-transparent border-none text-text-muted hover:text-error text-xs cursor-pointer transition-colors"
