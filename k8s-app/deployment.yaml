@@ -32,7 +32,7 @@ spec:
             claimName: n8n-webhook-gateway-app-data
       initContainers:
         - name: db-migrate
-          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1805-latest
+          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1905-latest
           command: ["python3", "scripts/migrate.py", "/data/gateway.db"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -43,7 +43,7 @@ spec:
               mountPath: /data
       containers:
         - name: n8n-webhook-gateway-app
-          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1805-latest
+          image: 373879251449.dkr.ecr.ap-southeast-2.amazonaws.com/n8n-webhook-gateway-app:1905-latest
           ports:
             - containerPort: 3000
           env:

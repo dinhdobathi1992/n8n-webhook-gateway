@@ -21,7 +21,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/admin">
       <div className="min-h-screen flex flex-col">
         <div className="flex-1">
           <Routes>

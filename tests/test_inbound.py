@@ -152,7 +152,7 @@ async def test_invalid_slack_signature_401(mock_fwd: AsyncMock, client: AsyncCli
 async def test_signed_route_no_slack_headers_rejects(mock_fwd: AsyncMock, client: AsyncClient):
     resp = await client.post("/test-signed/webhook", json={"data": "no-slack-headers"})
     assert resp.status_code == 401
-    assert "Missing Slack signature" in resp.json()["detail"]
+    assert "Missing signature" in resp.json()["detail"]
     mock_fwd.assert_not_called()
 
 

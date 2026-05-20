@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:3000"
     force_https_cookies: bool = True
     trusted_proxy_depth: int = 0
+    allowed_origins: str = ""
     forward_timeout_seconds: int = 30
     forward_max_retries: int = 3
     forward_retry_base_seconds: int = 1

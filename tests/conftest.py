@@ -75,7 +75,7 @@ async def auth_client(client: AsyncClient) -> AsyncClient:
                 session.add(user)
                 await session.commit()
 
-    resp = await client.post("/api/auth/login", json={
+    resp = await client.post("/admin/api/auth/login", json={
         "username": settings.admin_username,
         "password": settings.admin_password,
     })

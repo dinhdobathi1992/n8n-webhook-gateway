@@ -24,7 +24,7 @@ async def _seed(client: AsyncClient):
 
 
 async def create_route(auth_client: AsyncClient) -> int:
-    resp = await auth_client.post("/api/webhooks", json={
+    resp = await auth_client.post("/admin/api/webhooks", json={
         "slug": "slack-multi",
         "destination_url": "https://n8n.example.com/webhook/default",
         "signing_secret": "test-secret",
@@ -36,7 +36,7 @@ async def create_route(auth_client: AsyncClient) -> int:
 
 async def test_create_channel_rule(auth_client: AsyncClient):
     route_id = await create_route(auth_client)
-    resp = await auth_client.post(f"/api/webhooks/{route_id}/channels", json={
+    resp = await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json={
         "channel_id": "C0B3WDWKESH",
         "destination_url": "https://n8n.example.com/webhook/channel-a",
         "workflow_url": "https://n8n.example.com/workflow/123",
@@ -56,46 +56,46 @@ async def test_create_duplicate_channel_rule_409(auth_client: AsyncClient):
         "channel_id": "C0B3WDWKESH",
         "destination_url": "https://n8n.example.com/webhook/channel-a",
     }
-    await auth_client.post(f"/api/webhooks/{route_id}/channels", json=rule)
-    resp = await auth_client.post(f"/api/webhooks/{route_id}/channels", json=rule)
+    await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json=rule)
+    resp = await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json=rule)
     assert resp.status_code == 409
 
 
 async def test_list_channel_rules(auth_client: AsyncClient):
     route_id = await create_route(auth_client)
-    await auth_client.post(f"/api/webhooks/{route_id}/channels", json={
+    await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json={
         "channel_id": "C001",
         "destination_url": "https://n8n.example.com/webhook/1",
     })
-    await auth_client.post(f"/api/webhooks/{route_id}/channels", json={
+    await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json={
         "channel_id": "C002",
         "destination_url": "https://n8n.example.com/webhook/2",
     })
-    resp = await auth_client.get(f"/api/webhooks/{route_id}/channels")
+    resp = await auth_client.get(f"/admin/api/webhooks/{route_id}/channels")
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 
 
 async def test_delete_channel_rule(auth_client: AsyncClient):
     route_id = await create_route(auth_client)
-    create_resp = await auth_client.post(f"/api/webhooks/{route_id}/channels", json={
+    create_resp = await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json={
         "channel_id": "C001",
         "destination_url": "https://n8n.example.com/webhook/1",
     })
     rule_id = create_resp.json()["id"]
-    resp = await auth_client.delete(f"/api/webhooks/{route_id}/channels/{rule_id}")
+    resp = await auth_client.delete(f"/admin/api/webhooks/{route_id}/channels/{rule_id}")
     assert resp.status_code == 200
-    list_resp = await auth_client.get(f"/api/webhooks/{route_id}/channels")
+    list_resp = await auth_client.get(f"/admin/api/webhooks/{route_id}/channels")
     assert len(list_resp.json()) == 0
 
 
 async def test_channel_rules_included_in_route_response(auth_client: AsyncClient):
     route_id = await create_route(auth_client)
-    await auth_client.post(f"/api/webhooks/{route_id}/channels", json={
+    await auth_client.post(f"/admin/api/webhooks/{route_id}/channels", json={
         "channel_id": "C001",
         "destination_url": "https://n8n.example.com/webhook/1",
     })
-    resp = await auth_client.get(f"/api/webhooks/{route_id}")
+    resp = await auth_client.get(f"/admin/api/webhooks/{route_id}")
     assert resp.status_code == 200
     data = resp.json()
     assert "channel_rules" in data
@@ -105,13 +105,13 @@ async def test_channel_rules_included_in_route_response(auth_client: AsyncClient
 
 async def test_route_without_channel_rules_has_empty_list(auth_client: AsyncClient):
     route_id = await create_route(auth_client)
-    resp = await auth_client.get(f"/api/webhooks/{route_id}")
+    resp = await auth_client.get(f"/admin/api/webhooks/{route_id}")
     assert resp.status_code == 200
     assert resp.json()["channel_rules"] == []
 
 
 async def test_create_channel_rule_on_nonexistent_route_404(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/webhooks/9999/channels", json={
+    resp = await auth_client.post("/admin/api/webhooks/9999/channels", json={
         "channel_id": "C001",
         "destination_url": "https://n8n.example.com/webhook/1",
     })

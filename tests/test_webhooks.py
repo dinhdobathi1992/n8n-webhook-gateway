@@ -30,7 +30,7 @@ ROUTE_BASE = {
 
 
 async def test_create_route(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/webhooks", json={
+    resp = await auth_client.post("/admin/api/webhooks", json={
         "slug": "test-route",
         "destination_url": "https://n8n.example.com/webhook/abc",
         "signing_secret": "test-secret",
@@ -45,18 +45,18 @@ async def test_create_route(auth_client: AsyncClient):
 
 
 async def test_create_duplicate_slug(auth_client: AsyncClient):
-    await auth_client.post("/api/webhooks", json={"slug": "dup", **ROUTE_BASE})
-    resp = await auth_client.post("/api/webhooks", json={"slug": "dup", **ROUTE_BASE})
+    await auth_client.post("/admin/api/webhooks", json={"slug": "dup", **ROUTE_BASE})
+    resp = await auth_client.post("/admin/api/webhooks", json={"slug": "dup", **ROUTE_BASE})
     assert resp.status_code == 409
 
 
 async def test_create_reserved_slug(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/webhooks", json={"slug": "api", **ROUTE_BASE})
+    resp = await auth_client.post("/admin/api/webhooks", json={"slug": "api", **ROUTE_BASE})
     assert resp.status_code == 422
 
 
 async def test_create_without_signing_secret_rejected(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/webhooks", json={
+    resp = await auth_client.post("/admin/api/webhooks", json={
         "slug": "no-secret",
         "destination_url": "https://example.com/hook",
     })
@@ -64,24 +64,24 @@ async def test_create_without_signing_secret_rejected(auth_client: AsyncClient):
 
 
 async def test_list_routes(auth_client: AsyncClient):
-    await auth_client.post("/api/webhooks", json={"slug": "r1", **ROUTE_BASE})
-    resp = await auth_client.get("/api/webhooks")
+    await auth_client.post("/admin/api/webhooks", json={"slug": "r1", **ROUTE_BASE})
+    resp = await auth_client.get("/admin/api/webhooks")
     assert resp.status_code == 200
     assert len(resp.json()) >= 1
 
 
 async def test_get_route(auth_client: AsyncClient):
-    create = await auth_client.post("/api/webhooks", json={"slug": "get-me", **ROUTE_BASE})
+    create = await auth_client.post("/admin/api/webhooks", json={"slug": "get-me", **ROUTE_BASE})
     route_id = create.json()["id"]
-    resp = await auth_client.get(f"/api/webhooks/{route_id}")
+    resp = await auth_client.get(f"/admin/api/webhooks/{route_id}")
     assert resp.status_code == 200
     assert resp.json()["slug"] == "get-me"
 
 
 async def test_update_route(auth_client: AsyncClient):
-    create = await auth_client.post("/api/webhooks", json={"slug": "upd", **ROUTE_BASE})
+    create = await auth_client.post("/admin/api/webhooks", json={"slug": "upd", **ROUTE_BASE})
     route_id = create.json()["id"]
-    resp = await auth_client.patch(f"/api/webhooks/{route_id}", json={
+    resp = await auth_client.patch(f"/admin/api/webhooks/{route_id}", json={
         "destination_url": "https://new.example.com/hook",
         "enabled": False,
     })
@@ -91,29 +91,29 @@ async def test_update_route(auth_client: AsyncClient):
 
 
 async def test_delete_route_removes_from_db(auth_client: AsyncClient):
-    create = await auth_client.post("/api/webhooks", json={"slug": "del-me", **ROUTE_BASE})
+    create = await auth_client.post("/admin/api/webhooks", json={"slug": "del-me", **ROUTE_BASE})
     route_id = create.json()["id"]
-    resp = await auth_client.delete(f"/api/webhooks/{route_id}")
+    resp = await auth_client.delete(f"/admin/api/webhooks/{route_id}")
     assert resp.status_code == 200
-    get_resp = await auth_client.get(f"/api/webhooks/{route_id}")
+    get_resp = await auth_client.get(f"/admin/api/webhooks/{route_id}")
     assert get_resp.status_code == 404
 
 
 async def test_disable_route_via_patch(auth_client: AsyncClient):
-    create = await auth_client.post("/api/webhooks", json={"slug": "dis-me", **ROUTE_BASE})
+    create = await auth_client.post("/admin/api/webhooks", json={"slug": "dis-me", **ROUTE_BASE})
     route_id = create.json()["id"]
-    resp = await auth_client.patch(f"/api/webhooks/{route_id}", json={"enabled": False})
+    resp = await auth_client.patch(f"/admin/api/webhooks/{route_id}", json={"enabled": False})
     assert resp.status_code == 200
     assert resp.json()["enabled"] is False
 
 
 async def test_unauthenticated_rejected(client: AsyncClient):
-    resp = await client.get("/api/webhooks")
+    resp = await client.get("/admin/api/webhooks")
     assert resp.status_code == 401
 
 
 async def test_create_gchat_route(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/webhooks", json={
+    resp = await auth_client.post("/admin/api/webhooks", json={
         "slug": "gchat-route",
         "destination_url": "https://example.com/hook",
         "source_type": "gchat",
@@ -125,7 +125,7 @@ async def test_create_gchat_route(auth_client: AsyncClient):
 
 
 async def test_create_generic_route(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/webhooks", json={
+    resp = await auth_client.post("/admin/api/webhooks", json={
         "slug": "generic-route",
         "destination_url": "https://example.com/hook",
         "source_type": "generic",

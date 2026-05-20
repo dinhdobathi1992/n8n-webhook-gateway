@@ -41,9 +41,13 @@ async def lifespan(application: FastAPI):
 
 app = FastAPI(title="n8n Webhook Gateway", lifespan=lifespan)
 
+_origins = [settings.public_base_url]
+if settings.allowed_origins:
+    _origins.extend(o.strip() for o in settings.allowed_origins.split(",") if o.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.public_base_url],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,13 +82,13 @@ async def health(session: AsyncSession = Depends(get_session)):
     return {"status": "ok", "routes": count}
 
 
-# --- Static file serving for React UI (must be LAST) ---
+# --- Static file serving for React UI under /admin (must be LAST) ---
 ui_dist = Path(__file__).parent.parent / "ui" / "dist"
 
 if ui_dist.exists():
-    app.mount("/assets", StaticFiles(directory=ui_dist / "assets"), name="assets")
+    app.mount("/admin/assets", StaticFiles(directory=ui_dist / "assets"), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.get("/admin/{full_path:path}")
     async def serve_spa(full_path: str):
         file_path = (ui_dist / full_path).resolve()
         if file_path.is_relative_to(ui_dist.resolve()) and file_path.exists() and file_path.is_file():

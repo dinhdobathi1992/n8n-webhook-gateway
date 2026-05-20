@@ -25,7 +25,7 @@ async def _seed(client: AsyncClient):
 
 
 async def test_login_success(client: AsyncClient):
-    resp = await client.post("/api/auth/login", json={
+    resp = await client.post("/admin/api/auth/login", json={
         "username": settings.admin_username,
         "password": settings.admin_password,
     })
@@ -35,7 +35,7 @@ async def test_login_success(client: AsyncClient):
 
 
 async def test_login_wrong_password(client: AsyncClient):
-    resp = await client.post("/api/auth/login", json={
+    resp = await client.post("/admin/api/auth/login", json={
         "username": settings.admin_username,
         "password": "wrong",
     })
@@ -43,7 +43,7 @@ async def test_login_wrong_password(client: AsyncClient):
 
 
 async def test_login_unknown_user(client: AsyncClient):
-    resp = await client.post("/api/auth/login", json={
+    resp = await client.post("/admin/api/auth/login", json={
         "username": "nobody",
         "password": "whatever",
     })
@@ -51,7 +51,7 @@ async def test_login_unknown_user(client: AsyncClient):
 
 
 async def test_logout(auth_client: AsyncClient):
-    resp = await auth_client.post("/api/auth/logout")
+    resp = await auth_client.post("/admin/api/auth/logout")
     assert resp.status_code == 200
 
 

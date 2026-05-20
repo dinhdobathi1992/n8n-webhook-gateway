@@ -1,4 +1,4 @@
-const BASE = "";
+const BASE = "/admin";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const resp = await fetch(`${BASE}${path}`, {
